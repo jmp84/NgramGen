@@ -1,0 +1,90 @@
+/*
+ * State.h
+ *
+ *  Created on: 19 Oct 2012
+ *      Author: jmp84
+ */
+
+#ifndef STATE_H_
+#define STATE_H_
+
+#include "Arc.h"
+#include "StateKey.h"
+#include "Types.h"
+
+namespace cam {
+namespace eng {
+namespace gen {
+
+class Ngram;
+
+class State {
+public:
+  /**
+   * Constructor.
+   * @param key The key that uniquely defines the state.
+   */
+  State(StateKey* key);
+
+  /**
+   * Constructor.
+   * @param key The key that uniquely defines the state.
+   * @param cost The cost.
+   */
+  State(StateKey* key, Cost cost);
+
+  /**
+   * Computes the overlap between the coverage vector of this state and the
+   * coverage vector of ngram.
+   * @param ngram
+   * @return The overlap
+   */
+  int overlap(const Ngram& ngram) const;
+
+  /**
+   * Getter.
+   * @return The cost.
+   */
+  Cost cost() const;
+
+  /**
+   * Setter.
+   * @param cost The cost to be set.
+   */
+  void setCost(const Cost cost);
+
+  /**
+   * Getter.
+   * @return The coverage.
+   */
+  const Coverage& coverage() const;
+
+  /**
+   * Getter.
+   * @return The state key.
+   */
+  const StateKey* stateKey() const;
+
+  /**
+   *
+   * @return
+   */
+  lm::ngram::State getKenlmState() const;
+
+  /**
+   * Add an arc to the list of incoming arcs.
+   * @param arc The arc to be added to the list of incoming arcs.
+   */
+  void addArc(const Arc& arc);
+
+private:
+  StateKey* stateKey_;
+  Cost cost_;
+  std::vector<Arc> incomingArcs_;
+};
+
+} // namespace gen
+} // namespace eng
+} // namespace cam
+
+#endif /* STATE_H_ */
