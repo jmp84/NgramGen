@@ -21,10 +21,6 @@ class State;
 } // namespace ngram
 } // namespace lm
 
-namesapce fst {
-
-}
-
 namespace cam {
 namespace eng {
 namespace gen {
@@ -42,9 +38,9 @@ public:
   /**
    * Initializes the lattice. Creates an empty array of size the size of the
    * input. Creates an initial state and add it to the lattice.
-   * @param multiset The input multiset
+   * @param words The input words to be reordered.
    */
-  void init(const Multiset& multiset);
+  void init(const std::vector<int>& words);
 
   /**
    * Extends a state with an ngram.

@@ -20,9 +20,9 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-void Lattice::init(const Multiset& multiset) {
-  lattice_.resize(multiset.size());
-  Coverage emptyCoverage(multiset.size());
+void Lattice::init(const std::vector<int>& words) {
+  lattice_.resize(words.size());
+  Coverage emptyCoverage(words.size());
   lm::ngram::State beginSentenceState(languageModel_->BeginSentenceState());
   StateKey initStateKey(emptyCoverage, beginSentenceState);
   State initState(&initStateKey, 0);
@@ -91,7 +91,7 @@ void Lattice::prune(int columnIndex, int nbest) {
 }
 
 void Lattice::prune(int columnIndex, Cost threshold) {
-  std::set<State>::iterator stateIterator =
+  std::multiset<State>::iterator stateIterator =
       lattice_[columnIndex].statesSortedByCost_.begin();
   if (stateIterator == lattice_[columnIndex].statesSortedByCost_.end()) {
     // the column is empty, nothing to be done
