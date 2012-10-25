@@ -15,6 +15,7 @@ namespace cam {
 namespace eng {
 namespace gen {
 
+class State;
 class StateKey;
 
 /**
@@ -25,11 +26,18 @@ class StateKey;
  * in a set. The map simply contains pointers to these states.
  */
 class Column {
+public:
+  /**
+   * Checks if the column is empty, i.e. if it has no state.
+   * @return
+   */
+  bool empty();
+
 private:
   /** States indexed by StateKey (coverage + history). */
   std::map<StateKey, State*> statesIndexByStateKey_;
   /** States sorted by their cost.*/
-  std::set<State> statesSortedByCost_;
+  std::multiset<State> statesSortedByCost_;
 
   friend class Lattice;
 };

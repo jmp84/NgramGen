@@ -9,11 +9,21 @@
 #define LATTICE_H_
 
 #include <vector>
+#include <lm/model.hh>
+#include <fst/fst-decl.h>
 
 // cannot forward declare a typedef
 #include "Types.h"
 
-class lm::ngram::Model;
+namespace lm {
+namespace ngram {
+class State;
+} // namespace ngram
+} // namespace lm
+
+namesapce fst {
+
+}
 
 namespace cam {
 namespace eng {
@@ -51,10 +61,18 @@ public:
   void prune(int columnIndex, int nbest);
 
   /**
-   * Converts this lattice to an fst.
+   * Prune the column with index columnIndex. Keeps the states whose cost is
+   * between the minimum cost and the minimum cost plus a treshold.
+   * @param columnIndex The index of the column to be pruned.
+   * @param threshold The threshold.
+   */
+  void prune(int columnIndex, Cost threshold);
+
+  /**
+   * Converts this lattice to an fst in openFST format.
    * @param length The length of the input from which this lattice was built.
    */
-  void convert2fst(int length);
+  void convert2openfst(int length, fst::StdVectorFst* res);
 
 private:
   /**

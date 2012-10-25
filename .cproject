@@ -34,6 +34,7 @@
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/gtest/gtest-1.6.0/include"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/NgramGen/src}&quot;"/>
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/BUILD/include"/>
+									<listOptionValue builtIn="false" value="/home/blue1/gi212/tools/openfst-1.3.2/INSTALL_DIR/include"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.885849703" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -42,6 +43,7 @@
 								<option id="gnu.cpp.link.option.paths.1763807099" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/gtest/gtest-1.6.0/BUILD"/>
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/BUILD/lib"/>
+									<listOptionValue builtIn="false" value="/home/blue1/gi212/tools/openfst-1.3.2/INSTALL_DIR/lib"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.886236169" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
@@ -94,6 +96,7 @@
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/gtest/gtest-1.6.0/include"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/NgramGen/src}&quot;"/>
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/BUILD/include"/>
+									<listOptionValue builtIn="false" value="/home/blue1/gi212/tools/openfst-1.3.2/INSTALL_DIR/include"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1066542617" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -102,9 +105,11 @@
 								<option id="gnu.cpp.link.option.paths.217041675" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/gtest/gtest-1.6.0/BUILD"/>
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/BUILD/lib"/>
+									<listOptionValue builtIn="false" value="/home/blue1/gi212/tools/openfst-1.3.2/INSTALL_DIR/lib"/>
 								</option>
 								<option id="gnu.cpp.link.option.libs.238057550" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="gtest"/>
+									<listOptionValue builtIn="false" value="fst"/>
 									<listOptionValue builtIn="false" value="gtest_main"/>
 									<listOptionValue builtIn="false" value="pthread"/>
 								</option>

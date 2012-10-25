@@ -21,7 +21,19 @@ namespace gen {
  */
 class StateKey {
 public:
+  /**
+   * Constructor.
+   * @param coverage The coverage so far.
+   * @param kenlmState The history.
+   */
   StateKey(const Coverage& coverage, const lm::ngram::State& kenlmState);
+
+  /**
+   * Redefine operator< to be able to have StateKey as a key in a map.
+   * @param other The other StateKey to be compared to.
+   * @return true if this object is less than the other one.
+   */
+  bool operator<(const StateKey& other) const;
 
 private:
   /** Coverage of the input so far. */

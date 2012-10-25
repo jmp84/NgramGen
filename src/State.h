@@ -34,6 +34,15 @@ public:
   State(StateKey* key, Cost cost);
 
   /**
+   * Redefine operator< to be able to have State as a key in a multiset. The
+   * comparison is simply based on cost.
+   * @param other The other state to compare to.
+   * @return true if the cost of this state is less than the cost of the other
+   * state.
+   */
+  bool operator<(const State& other) const;
+
+  /**
    * Computes the overlap between the coverage vector of this state and the
    * coverage vector of ngram.
    * @param ngram
@@ -66,10 +75,16 @@ public:
   const StateKey* stateKey() const;
 
   /**
-   *
-   * @return
+   * Getter.
+   * @return The history (kenLM state) of the state key.
    */
   lm::ngram::State getKenlmState() const;
+
+  /**
+   * Getter.
+   * @return The list of incoming arcs.
+   */
+  const std::vector<Arc>& incomingArcs() const;
 
   /**
    * Add an arc to the list of incoming arcs.

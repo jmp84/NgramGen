@@ -23,7 +23,18 @@ class State;
  */
 class Arc {
 public:
+  /**
+   * Constructor
+   * @param origin The origin state
+   * @param ngram The n-gram label
+   */
   Arc(const State* origin, const Ngram* ngram);
+
+  /**
+   * Getter.
+   * @return The n-gram.
+   */
+  const Ngram* ngram() const;
 
 private:
   /** Pointer to the origin state of this arc.*/

@@ -18,6 +18,10 @@ State::State(StateKey* stateKey) : stateKey_(stateKey), cost_(0) {}
 State::State(StateKey* stateKey, Cost cost) :
     stateKey_(stateKey), cost_(cost) {}
 
+bool State::operator<(const State& other) const {
+  return (cost_ < other.cost_);
+}
+
 int State::overlap(const Ngram& ngram) const {
   Coverage intersection =
       stateKey_->coverage_ & ngram.coverage();
@@ -42,6 +46,10 @@ const StateKey* State::stateKey() const {
 
 lm::ngram::State State::getKenlmState() const {
   return stateKey_->kenlmState_;
+}
+
+const std::vector<Arc>& State::incomingArcs() const {
+  return incomingArcs_;
 }
 
 void State::addArc(const Arc& arc) {
