@@ -11,7 +11,8 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-Ngram::Ngram(const Coverage& coverage) : coverage_(coverage) {}
+Ngram::Ngram(const Coverage& coverage, const std::vector<int>& ngram) :
+    coverage_(coverage), ngram_(ngram) {}
 
 const Coverage& Ngram::coverage() const {
   return coverage_;

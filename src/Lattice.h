@@ -27,6 +27,7 @@ namespace gen {
 
 class Column;
 class Ngram;
+class NgramLoader;
 class State;
 
 /**
@@ -40,14 +41,15 @@ public:
    * input. Creates an initial state and add it to the lattice.
    * @param words The input words to be reordered.
    */
-  void init(const std::vector<int>& words);
+  void init(const std::vector<int>& words, const std::string& lmfile);
 
   /**
-   * Extends a state with an ngram.
-   * @param state The state to be extended
-   * @param ngram The ngram used to extend the state
+   * Extends a column by extending all states in the column with the ngrams
+   * provided by an ngram loader.
+   * @param ngramLoader The ngram loader that contains a list of ngrams.
+   * @param columnIndex The index of the column to be extended.
    */
-  void extend(const State& state, const Ngram& ngram);
+  void extend(const NgramLoader& ngramLoader, int columnIndex);
 
   /**
    * Prune the column with index columnIndex. Keeps the n-best states.
@@ -71,6 +73,13 @@ public:
   void convert2openfst(int length, fst::StdVectorFst* res);
 
 private:
+  /**
+   * Extends a state with an ngram.
+   * @param state The state to be extended
+   * @param ngram The ngram used to extend the state
+   */
+  void extend(const State& state, const Ngram& ngram);
+
   /**
    * Computes the score of a state extended with an ngram.
    * @param state The state to be extended with an ngram.

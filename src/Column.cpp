@@ -5,6 +5,8 @@
  *      Author: jmp84
  */
 
+#include "Column.h"
+
 namespace cam {
 namespace eng {
 namespace gen {

@@ -23,7 +23,7 @@ public:
    * Constructor.
    * @param coverage
    */
-  Ngram(const Coverage& coverage);
+  Ngram(const Coverage& coverage, const std::vector<int>& ngram);
 
   /**
    * Getter.

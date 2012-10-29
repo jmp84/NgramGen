@@ -31,34 +31,32 @@
 								<option id="gnu.cpp.compiler.option.debugging.level.138372312" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.1970040656" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/boost/boost_1_51_0"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/gflags/gflags-2.0/BUILD/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/glog/glog-0.3.2/BUILD/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/gtest/gtest-1.6.0/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/boost/boost_1_51_0"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/kenlm/kenlm/BUILD/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/openfst/openfst-1.3.2/INSTALL_DIR/include"/>
-									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/gtest/gtest-1.6.0/include"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/NgramGen/src}&quot;"/>
-									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/BUILD/include"/>
 									<listOptionValue builtIn="false" value="/home/blue1/gi212/tools/openfst-1.3.2/INSTALL_DIR/include"/>
+									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/kenlm/BUILD/include"/>
 								</option>
+								<option id="gnu.cpp.compiler.option.warnings.allwarn.1784138602" name="All warnings (-Wall)" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
+								<option id="gnu.cpp.compiler.option.other.other.1887191472" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.885849703" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cross.c.linker.796632338" name="Cross GCC Linker" superClass="cdt.managedbuild.tool.gnu.cross.c.linker"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.2052251329" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker">
 								<option id="gnu.cpp.link.option.paths.1763807099" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/gtest/gtest-1.6.0/BUILD"/>
-									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/BUILD/lib"/>
+									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/glog/glog-0.3.2/BUILD/lib"/>
+									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/gflags/gflags-2.0/BUILD/lib"/>
 									<listOptionValue builtIn="false" value="/home/blue1/gi212/tools/openfst-1.3.2/INSTALL_DIR/lib"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/kenlm/kenlm/BUILD/lib"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/gtest/gtest-1.6.0/BUILD"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/openfst/openfst-1.3.2/INSTALL_DIR/lib"/>
+									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/kenlm/BUILD/lib"/>
 								</option>
 								<option id="gnu.cpp.link.option.libs.1900612592" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
-									<listOptionValue builtIn="false" value="pthread"/>
-									<listOptionValue builtIn="false" value="kenlm"/>
+									<listOptionValue builtIn="false" value="z"/>
 									<listOptionValue builtIn="false" value="fst"/>
+									<listOptionValue builtIn="false" value="kenlm"/>
+									<listOptionValue builtIn="false" value="dl"/>
+									<listOptionValue builtIn="false" value="gtest_main"/>
+									<listOptionValue builtIn="false" value="pthread"/>
 								</option>
+								<option id="gnu.cpp.link.option.flags.2081085752" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.886236169" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -66,14 +64,7 @@
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cross.archiver.312883590" name="Cross GCC Archiver" superClass="cdt.managedbuild.tool.gnu.cross.archiver"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.assembler.944793489" name="Cross GCC Assembler" superClass="cdt.managedbuild.tool.gnu.cross.assembler">
-								<option id="gnu.both.asm.option.include.paths.1253477049" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/juan/Programs/gtest/gtest-1.6.0/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/boost/boost_1_51_0"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/kenlm/kenlm/BUILD/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/openfst/openfst-1.3.2/INSTALL_DIR/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/gflags/gflags-2.0/BUILD/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/glog/glog-0.3.2/BUILD/include"/>
-								</option>
+								<option id="gnu.both.asm.option.include.paths.1253477049" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths"/>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.903513301" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>
@@ -108,6 +99,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cross.c.compiler.1866208820" name="Cross GCC Compiler" superClass="cdt.managedbuild.tool.gnu.cross.c.compiler">
 								<option defaultValue="gnu.c.optimization.level.most" id="gnu.c.compiler.option.optimization.level.1808786030" name="Optimization Level" superClass="gnu.c.compiler.option.optimization.level" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.debugging.level.1798297301" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" value="gnu.c.debugging.level.none" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.misc.other.1881117570" name="Other flags" superClass="gnu.c.compiler.option.misc.other" value="-c -fmessage-length=0" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1680754155" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.compiler.1648223771" name="Cross G++ Compiler" superClass="cdt.managedbuild.tool.gnu.cross.cpp.compiler">
@@ -115,34 +107,32 @@
 								<option id="gnu.cpp.compiler.option.debugging.level.606256767" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.404140515" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/boost/boost_1_51_0"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/gflags/gflags-2.0/BUILD/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/glog/glog-0.3.2/BUILD/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/gtest/gtest-1.6.0/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/boost/boost_1_51_0"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/kenlm/kenlm/BUILD/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/openfst/openfst-1.3.2/INSTALL_DIR/include"/>
-									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/gtest/gtest-1.6.0/include"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/NgramGen/src}&quot;"/>
-									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/BUILD/include"/>
 									<listOptionValue builtIn="false" value="/home/blue1/gi212/tools/openfst-1.3.2/INSTALL_DIR/include"/>
+									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/kenlm/BUILD/include"/>
 								</option>
+								<option id="gnu.cpp.compiler.option.warnings.allwarn.976376618" name="All warnings (-Wall)" superClass="gnu.cpp.compiler.option.warnings.allwarn" value="false" valueType="boolean"/>
+								<option id="gnu.cpp.compiler.option.other.other.391812442" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" value="-c -fmessage-length=0" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1066542617" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cross.c.linker.398094207" name="Cross GCC Linker" superClass="cdt.managedbuild.tool.gnu.cross.c.linker"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.193478909" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker">
 								<option id="gnu.cpp.link.option.paths.217041675" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/gtest/gtest-1.6.0/BUILD"/>
-									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/BUILD/lib"/>
+									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/glog/glog-0.3.2/BUILD/lib"/>
+									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/gflags/gflags-2.0/BUILD/lib"/>
 									<listOptionValue builtIn="false" value="/home/blue1/gi212/tools/openfst-1.3.2/INSTALL_DIR/lib"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/kenlm/kenlm/BUILD/lib"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/gtest/gtest-1.6.0/BUILD"/>
+									<listOptionValue builtIn="false" value="/home/blue1/jmp84/phd/code/kenlm/kenlm/BUILD/lib"/>
 								</option>
 								<option id="gnu.cpp.link.option.libs.238057550" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
-									<listOptionValue builtIn="false" value="gtest"/>
+									<listOptionValue builtIn="false" value="z"/>
 									<listOptionValue builtIn="false" value="fst"/>
+									<listOptionValue builtIn="false" value="kenlm"/>
+									<listOptionValue builtIn="false" value="dl"/>
 									<listOptionValue builtIn="false" value="gtest_main"/>
 									<listOptionValue builtIn="false" value="pthread"/>
 								</option>
+								<option id="gnu.cpp.link.option.flags.832716983" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.607392504" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -150,14 +140,7 @@
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cross.archiver.1795866474" name="Cross GCC Archiver" superClass="cdt.managedbuild.tool.gnu.cross.archiver"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.assembler.897138675" name="Cross GCC Assembler" superClass="cdt.managedbuild.tool.gnu.cross.assembler">
-								<option id="gnu.both.asm.option.include.paths.2046036546" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="/home/juan/Programs/gtest/gtest-1.6.0/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/boost/boost_1_51_0"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/kenlm/kenlm/BUILD/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/openfst/openfst-1.3.2/INSTALL_DIR/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/gflags/gflags-2.0/BUILD/include"/>
-									<listOptionValue builtIn="false" value="/home/juan/Programs/glog/glog-0.3.2/BUILD/include"/>
-								</option>
+								<option id="gnu.both.asm.option.include.paths.2046036546" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths"/>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.571984291" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>

@@ -10,9 +10,11 @@
 #include <map>
 #include <boost/lexical_cast.hpp>
 #include <fst/fstlib.h>
+#include <lm/state.hh>
 
 #include "Column.h"
 #include "Ngram.h"
+#include "NgramLoader.h"
 #include "State.h"
 #include "Types.h"
 
@@ -20,18 +22,19 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-void Lattice::init(const std::vector<int>& words) {
+void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
   lattice_.resize(words.size());
+  languageModel_ = new lm::ngram::Model(lmfile.c_str());
   Coverage emptyCoverage(words.size());
   lm::ngram::State beginSentenceState(languageModel_->BeginSentenceState());
   StateKey initStateKey(emptyCoverage, beginSentenceState);
   State initState(&initStateKey, 0);
-  lattice_[0].statesIndexByStateKey_[initStateKey] = &State;
+  lattice_[0].statesIndexByStateKey_[initStateKey] = &initState;
   lattice_[0].statesSortedByCost_.insert(initState);
 }
 
 Cost Lattice::cost(const State& state, const Ngram& ngram,
-          lm::ngram::State* nextKenlmState) const {
+                   lm::ngram::State* nextKenlmState) const {
   Cost res = 0;
   lm::ngram::State startKenlmState = state.getKenlmState();
   const lm::ngram::Vocabulary& vocab = languageModel_->GetVocabulary();
@@ -44,6 +47,19 @@ Cost Lattice::cost(const State& state, const Ngram& ngram,
     startKenlmState = *nextKenlmState;
   }
   return res;
+}
+
+void Lattice::extend(const NgramLoader& ngramLoader, int columnIndex) {
+  const std::vector<Ngram>& ngrams = ngramLoader.ngrams();
+  for (std::multiset<State>::const_iterator it =
+      lattice_[columnIndex].statesSortedByCost_.begin();
+      it != lattice_[columnIndex].statesSortedByCost_.end(); ++it) {
+    for (int i = 0; i < ngrams.size(); i++) {
+      if (it->overlap(ngrams[i]) == 0) {
+        extend(*it, ngrams[i]);
+      }
+    }
+  }
 }
 
 void Lattice::extend(const State& state, const Ngram& ngram) {
@@ -126,7 +142,7 @@ void Lattice::convert2openfst(int length, fst::StdVectorFst* res) {
   for (std::multiset<State>::iterator it =
       lattice_[length].statesSortedByCost_.begin();
       it != lattice_[length].statesSortedByCost_.end(); it++) {
-    statesToBeProcessed.push(&(*it));
+    statesToBeProcessed.push(const_cast<State*>(&(*it)));
     StateId stateId = res->AddState();
     openfstStatesToBeProcessed.push(stateId);
     // Add an epsilon transition from the initial state to the lattice final
