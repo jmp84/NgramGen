@@ -5,6 +5,8 @@
  *      Author: jmp84
  */
 
+#include <iostream>
+
 #include "StateKey.h"
 
 namespace cam {

@@ -5,6 +5,8 @@
  *      Author: jmp84
  */
 
+#include <iostream>
+
 #include "Ngram.h"
 #include "State.h"
 #include "Types.h"

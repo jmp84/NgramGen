@@ -42,6 +42,7 @@ private:
   lm::ngram::State kenlmState_;
 
   friend class State;
+  friend class Lattice;
 };
 
 } // namespace gen

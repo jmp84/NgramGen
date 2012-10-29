@@ -36,6 +36,8 @@ class State;
  */
 class Lattice {
 public:
+  void printColumn(int index);
+
   /**
    * Initializes the lattice. Creates an empty array of size the size of the
    * input. Creates an initial state and add it to the lattice.

@@ -96,6 +96,8 @@ private:
   StateKey* stateKey_;
   Cost cost_;
   std::vector<Arc> incomingArcs_;
+
+  friend class Lattice;
 };
 
 } // namespace gen

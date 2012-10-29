@@ -81,6 +81,7 @@ int main(int argc, char** argv) {
   ngramLoader.loadNgram(FLAGS_ngrams);
   Lattice lattice;
   lattice.init(inputWords, FLAGS_lm);
+  lattice.printColumn(0);
   for (int i = 0; i <= inputWords.size(); i++) {
     if (FLAGS_prune) {
       lattice.prune(i, 50);

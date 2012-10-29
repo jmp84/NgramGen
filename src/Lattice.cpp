@@ -22,14 +22,24 @@ namespace cam {
 namespace eng {
 namespace gen {
 
+void Lattice::printColumn(int index) {
+  for (std::map<StateKey, State*>::iterator it =
+      lattice_[index].statesIndexByStateKey_.begin();
+      it != lattice_[index].statesIndexByStateKey_.end(); ++it) {
+    std::cerr << it->first.coverage_ << std::endl;
+    //std::cerr << it->first.kenlmState_ << std::endl;
+    std::cerr << it->second->cost_ << std::endl;
+  }
+}
+
 void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
   lattice_.resize(words.size());
   languageModel_ = new lm::ngram::Model(lmfile.c_str());
   Coverage emptyCoverage(words.size());
   lm::ngram::State beginSentenceState(languageModel_->BeginSentenceState());
-  StateKey initStateKey(emptyCoverage, beginSentenceState);
-  State initState(&initStateKey, 0);
-  lattice_[0].statesIndexByStateKey_[initStateKey] = &initState;
+  StateKey* initStateKey = new StateKey(emptyCoverage, beginSentenceState);
+  State initState(initStateKey, 0);
+  lattice_[0].statesIndexByStateKey_[*initStateKey] = &initState;
   lattice_[0].statesSortedByCost_.insert(initState);
 }
 
@@ -71,10 +81,10 @@ void Lattice::extend(const State& state, const Ngram& ngram) {
   //const Ngram* ngramPointer = &ngram;
   //Arc newArc(statePointer, ngramPointer);
   Arc newArc(&state, &ngram);
-  StateKey newStateKey(newCoverage, nextKenlmState);
+  StateKey* newStateKey = new StateKey(newCoverage, nextKenlmState);
   State* newState;
   std::map<StateKey, State*>::const_iterator findNewStateKey =
-      lattice_[columnIndex].statesIndexByStateKey_.find(newStateKey);
+      lattice_[columnIndex].statesIndexByStateKey_.find(*newStateKey);
   if (findNewStateKey != lattice_[columnIndex].statesIndexByStateKey_.end()) {
     newState = findNewStateKey->second;
     Cost existingCost = newState->cost();
@@ -83,9 +93,9 @@ void Lattice::extend(const State& state, const Ngram& ngram) {
       // TODO here we need the column to be resorted if we modify the cost.
     }
   } else {
-    newState = new State(&newStateKey, newCost);
+    newState = new State(newStateKey, newCost);
     lattice_[columnIndex].statesSortedByCost_.insert(*newState);
-    lattice_[columnIndex].statesIndexByStateKey_[newStateKey] = newState;
+    lattice_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
   }
   newState->addArc(newArc);
 }
