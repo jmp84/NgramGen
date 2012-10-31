@@ -18,6 +18,10 @@ namespace gen {
 class State;
 class StateKey;
 
+struct StatePointerComparator {
+  bool operator()(const State* s1, const State* s2) const;
+};
+
 /**
  * A column in the lattice. A column has multiple states. We want to be able to
  * access these states in O(1) by a state key (history + coverage), so states
@@ -37,7 +41,7 @@ private:
   /** States indexed by StateKey (coverage + history). */
   std::map<StateKey, State*> statesIndexByStateKey_;
   /** States sorted by their cost.*/
-  std::multiset<State> statesSortedByCost_;
+  std::multiset<State*, StatePointerComparator> statesSortedByCost_;
 
   friend class Lattice;
 };

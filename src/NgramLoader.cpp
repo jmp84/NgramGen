@@ -31,16 +31,15 @@ void NgramLoader::loadNgram(const std::string& fileName) {
     boost::split(parts, line, boost::is_any_of(" "));
     //CHECK_EQ(parts.size(), 3) << "Wrong format, should have 3 parts: " << line;
     Coverage coverage(parts[1]);
-    boost::split(ngramString, parts[1], boost::is_any_of("_"));
+    boost::split(ngramString, parts[2], boost::is_any_of("_"));
     ngramInt.resize(ngramString.size());
     std::transform(ngramString.begin(), ngramString.end(), ngramInt.begin(),
                    boost::lexical_cast<int, std::string>);
-    Ngram ngram(coverage, ngramInt);
-    ngrams_.push_back(ngram);
+    ngrams_[ngramInt].push_back(coverage);
   }
 }
 
-const std::vector<Ngram>& NgramLoader::ngrams() const {
+const std::map<std::vector<int>, std::vector<Coverage> >& NgramLoader::ngrams() const {
   return ngrams_;
 }
 

@@ -6,10 +6,16 @@
  */
 
 #include "Column.h"
+#include "State.h"
 
 namespace cam {
 namespace eng {
 namespace gen {
+
+bool StatePointerComparator::operator()(const State* s1,
+                                        const State* s2) const {
+  return s1->cost() < s2->cost();
+}
 
 bool Column::empty() {
   if (statesIndexByStateKey_.empty() && !statesSortedByCost_.empty()) {

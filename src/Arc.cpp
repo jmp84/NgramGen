@@ -12,10 +12,14 @@ namespace eng {
 namespace gen {
 
 
-Arc::Arc(const State* origin, const Ngram* ngram) :
-    origin_(const_cast<State*>(origin)), ngram_(const_cast<Ngram*>(ngram)) {}
+Arc::Arc(State* origin, std::vector<int>* ngram) :
+    origin_(origin), ngram_(ngram) {}
 
-const Ngram* Arc::ngram() const {
+const State* Arc::state() const {
+  return origin_;
+}
+
+const std::vector<int>* Arc::ngram() const {
   return ngram_;
 }
 

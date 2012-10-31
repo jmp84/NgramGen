@@ -24,9 +24,9 @@ bool State::operator<(const State& other) const {
   return (cost_ < other.cost_);
 }
 
-int State::overlap(const Ngram& ngram) const {
+int State::overlap(const Coverage& coverage) const {
   Coverage intersection =
-      stateKey_->coverage_ & ngram.coverage();
+      stateKey_->coverage_ & coverage;
   return intersection.count();
 }
 

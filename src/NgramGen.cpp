@@ -65,7 +65,6 @@ void parseInput(const std::string& fileName, std::vector<int>* words) {
  * This is the main program.
  */
 int main(int argc, char** argv) {
-  std::cerr << argc << std::endl;
   using namespace cam::eng::gen;
   std::string usage = "Generates a lattice of reordered sentences.\n\n Usage: ";
   usage += argv[0];
@@ -81,14 +80,17 @@ int main(int argc, char** argv) {
   ngramLoader.loadNgram(FLAGS_ngrams);
   Lattice lattice;
   lattice.init(inputWords, FLAGS_lm);
-  lattice.printColumn(0);
   for (int i = 0; i <= inputWords.size(); i++) {
     if (FLAGS_prune) {
       lattice.prune(i, 50);
     }
     lattice.extend(ngramLoader, i);
+    if (i == 5) {
+      //lattice.print();
+      //exit(0);
+    }
   }
   fst::StdVectorFst result;
-  lattice.convert2openfst(static_cast<int>(inputWords.size()), &result);
+  lattice.convert2openfst(inputWords.size(), &result);
   result.Write(FLAGS_fstoutput);
 }

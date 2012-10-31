@@ -36,6 +36,7 @@ class State;
  */
 class Lattice {
 public:
+  void print();
   void printColumn(int index);
 
   /**
@@ -78,9 +79,11 @@ private:
   /**
    * Extends a state with an ngram.
    * @param state The state to be extended
-   * @param ngram The ngram used to extend the state
+   * @param ngram The n-gram used to extend the state
+   * @param coverage The coverage of the n-gram
    */
-  void extend(const State& state, const Ngram& ngram);
+  void extend(const State& state, const std::vector<int>& ngram,
+              const Coverage& coverage);
 
   /**
    * Computes the score of a state extended with an ngram.
@@ -89,7 +92,7 @@ private:
    * @param nextKenlmState The kenlm state we end up in.
    * @return The score
    */
-  Cost cost(const State& state, const Ngram& ngram,
+  Cost cost(const State& state, const std::vector<int>& ngram,
             lm::ngram::State* nextKenlmState) const;
 
   /** Lattice. Indices indicate how many words have been covered. */

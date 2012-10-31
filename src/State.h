@@ -43,12 +43,12 @@ public:
   bool operator<(const State& other) const;
 
   /**
-   * Computes the overlap between the coverage vector of this state and the
-   * coverage vector of ngram.
+   * Computes the overlap between the coverage vector of this state and another
+   * coverage vector.
    * @param ngram
    * @return The overlap
    */
-  int overlap(const Ngram& ngram) const;
+  int overlap(const Coverage& coverage) const;
 
   /**
    * Getter.

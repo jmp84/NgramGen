@@ -8,7 +8,10 @@
 #ifndef NGRAMLOADER_H_
 #define NGRAMLOADER_H_
 
+#include <map>
 #include <vector>
+
+#include "Types.h"
 
 namespace cam {
 namespace eng {
@@ -36,12 +39,16 @@ public:
 
   /**
    * Getter.
-   * @return The list of ngrams.
+   * @return The ngrams.
    */
-  const std::vector<Ngram>& ngrams() const;
+  const std::map<std::vector<int>, std::vector<Coverage> >& ngrams() const;
 
 private:
-  std::vector<Ngram> ngrams_;
+  /**
+   * Map between an n-gram (sequence of words) and coverages. There may be
+   * multiple coverages if a word in the input is repeated.
+   */
+  std::map<std::vector<int>, std::vector<Coverage> > ngrams_;
 
 };
 

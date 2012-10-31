@@ -8,7 +8,7 @@
 #ifndef ARC_H_
 #define ARC_H_
 
-//#include "Ngram.h"
+#include <vector>
 
 namespace cam {
 namespace eng {
@@ -28,19 +28,25 @@ public:
    * @param origin The origin state
    * @param ngram The n-gram label
    */
-  Arc(const State* origin, const Ngram* ngram);
+  Arc(State* origin, std::vector<int>* ngram);
+
+  /**
+   * Getter
+   * @return The state.
+   */
+  const State* state() const;
 
   /**
    * Getter.
    * @return The n-gram.
    */
-  const Ngram* ngram() const;
+  const std::vector<int>* ngram() const;
 
 private:
   /** Pointer to the origin state of this arc.*/
   State* origin_;
   /** Label of the arc. Pointer for low memory consumption. */
-  Ngram* ngram_;
+  std::vector<int>* ngram_;
 };
 
 } // namespace gen
