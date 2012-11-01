@@ -11,7 +11,6 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-
 Arc::Arc(State* origin, std::vector<int>* ngram, const Cost cost) :
     origin_(origin), ngram_(ngram), cost_(cost) {}
 

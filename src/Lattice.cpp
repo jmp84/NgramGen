@@ -81,9 +81,15 @@ Cost Lattice::cost(const State& state, const vector<int>& ngram,
   lm::ngram::State startKenlmState = state.getKenlmState();
   const lm::ngram::Vocabulary& vocab = languageModel_->GetVocabulary();
   for (int i = 0; i < ngram.size(); i++) {
-    res = languageModel_->Score(startKenlmState,
-                                vocab.Index(
-                                    boost::lexical_cast<std::string>(ngram[i])),
+    std::string word;
+    if (ngram[i] == 2) {
+      word = "</s>";
+    } else if (ngram[i] == 1) {
+      word = "<s>";
+    } else {
+      word = boost::lexical_cast<std::string>(ngram[i]);
+    }
+    res = languageModel_->Score(startKenlmState, vocab.Index(word),
                                 *nextKenlmState);
     startKenlmState = *nextKenlmState;
   }
@@ -182,7 +188,7 @@ void Lattice::prune(int columnIndex, Cost threshold) {
 }
 
 void Lattice::convert2openfst(int length, fst::StdVectorFst* res) {
-  this->print();
+  //this->print();
   typedef fst::StdArc::StateId StateId;
   // if there is no state in the last column, then failure, return a null fst.
   if (lattice_[length].empty()) {
@@ -220,11 +226,12 @@ void Lattice::convert2openfst(int length, fst::StdVectorFst* res) {
       const vector<int>* words = incomingArcs[i].ngram();
       StateId previousStateId = openfstStateToBeProcessed;
       StateId nextStateId;
-      for (int j = 0; j < words->size(); j++) {
+      int ngramLastIndex = words->size() - 1;
+      for (int j = ngramLastIndex; j >= 0; j--) {
         // put the cost of the arc on the first openfst arc, then for the
         // remaining arc, put a cost of one.
         const fst::StdArc::Weight arcCost =
-            (j == 0) ? incomingArcs[i].cost() : fst::StdArc::Weight::One();
+            (j == ngramLastIndex) ? incomingArcs[i].cost() : fst::StdArc::Weight::One();
         nextStateId = tempres1.AddState();
         tempres1.AddArc(previousStateId,
                         fst::StdArc((*words)[j], (*words)[j], arcCost, nextStateId));
