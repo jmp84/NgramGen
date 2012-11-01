@@ -33,6 +33,10 @@ public:
    */
   State(StateKey* key, Cost cost);
 
+  void setIncomingArcs(const std::vector<Arc>& incomingArcs) {
+    incomingArcs_ = incomingArcs;
+  }
+
   /**
    * Redefine operator< to be able to have State as a key in a multiset. The
    * comparison is simply based on cost.

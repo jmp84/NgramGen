@@ -122,17 +122,24 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
   std::map<StateKey, State*>::const_iterator findNewStateKey =
       lattice_[columnIndex].statesIndexByStateKey_.find(*newStateKey);
   if (findNewStateKey != lattice_[columnIndex].statesIndexByStateKey_.end()) {
-    newState = findNewStateKey->second;
-    Cost existingCost = newState->cost();
+    Cost existingCost = findNewStateKey->second->cost();
+    // if the new cost is smaller, then we need to remove the state from the
+    // set containing states sorted by cost then reinsert a new state so the
+    // ordering is still correct.
     if (newCost < existingCost) {
+      newState = new State(newStateKey, newCost);
+      newState->setIncomingArcs(findNewStateKey->second->incomingArcs());
+      newState->addArc(newArc);
       newState->setCost(newCost);
-      // TODO here we need the column to be resorted if we modify the cost.
+      lattice_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
+      lattice_[columnIndex].statesSortedByCost_.erase(findNewStateKey->second);
+      lattice_[columnIndex].statesSortedByCost_.insert(newState);
+    } else {
+      newState = findNewStateKey->second;
+      newState->addArc(newArc);
     }
-    newState->addArc(newArc);
   } else {
     newState = new State(newStateKey, newCost);
-    // need to add the arc before putting it in the multiset (insert uses a copy
-    // constructor), that's why the command addArc is repeated in the if else
     newState->addArc(newArc);
     lattice_[columnIndex].statesSortedByCost_.insert(newState);
     lattice_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
