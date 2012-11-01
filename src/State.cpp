@@ -15,10 +15,9 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-State::State(StateKey* stateKey) : stateKey_(stateKey), cost_(0) {}
-
-State::State(StateKey* stateKey, Cost cost) :
-    stateKey_(stateKey), cost_(cost) {}
+State::State(StateKey* stateKey, const Cost cost,
+             const std::vector<Arc>& incomingArcs) :
+                 stateKey_(stateKey), cost_(cost), incomingArcs_(incomingArcs) {}
 
 bool State::operator<(const State& other) const {
   return (cost_ < other.cost_);

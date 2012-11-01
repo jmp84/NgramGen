@@ -70,7 +70,7 @@ void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
   Coverage emptyCoverage(words.size());
   lm::ngram::State beginSentenceState(languageModel_->BeginSentenceState());
   StateKey* initStateKey = new StateKey(emptyCoverage, beginSentenceState);
-  State* initState = new State(initStateKey, 0);
+  State* initState = new State(initStateKey, 0, std::vector<Arc>());
   lattice_[0].statesIndexByStateKey_[*initStateKey] = initState;
   lattice_[0].statesSortedByCost_.insert(initState);
 }
@@ -116,7 +116,9 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
   int columnIndex = newCoverage.count();
   lm::ngram::State nextKenlmState;
   Cost newCost = cost(state, ngram, &nextKenlmState);
-  Arc newArc(const_cast<State*>(&state), const_cast<std::vector<int>*>(&ngram));
+  Cost diffCost = newCost - state.cost();
+  Arc newArc(const_cast<State*>(&state), const_cast<std::vector<int>*>(&ngram),
+             diffCost);
   StateKey* newStateKey = new StateKey(newCoverage, nextKenlmState);
   State* newState;
   std::map<StateKey, State*>::const_iterator findNewStateKey =
@@ -127,20 +129,18 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
     // set containing states sorted by cost then reinsert a new state so the
     // ordering is still correct.
     if (newCost < existingCost) {
-      newState = new State(newStateKey, newCost);
-      newState->setIncomingArcs(findNewStateKey->second->incomingArcs());
-      newState->addArc(newArc);
-      newState->setCost(newCost);
+      newState = new State(newStateKey, newCost,
+                           findNewStateKey->second->incomingArcs());
       lattice_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       lattice_[columnIndex].statesSortedByCost_.erase(findNewStateKey->second);
       lattice_[columnIndex].statesSortedByCost_.insert(newState);
     } else {
       newState = findNewStateKey->second;
-      newState->addArc(newArc);
     }
-  } else {
-    newState = new State(newStateKey, newCost);
     newState->addArc(newArc);
+  } else {
+    std::vector<Arc> incomingArcs(1, newArc);
+    newState = new State(newStateKey, newCost, incomingArcs);
     lattice_[columnIndex].statesSortedByCost_.insert(newState);
     lattice_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
   }
@@ -221,10 +221,13 @@ void Lattice::convert2openfst(int length, fst::StdVectorFst* res) {
       StateId previousStateId = openfstStateToBeProcessed;
       StateId nextStateId;
       for (int j = 0; j < words->size(); j++) {
+        // put the cost of the arc on the first openfst arc, then for the
+        // remaining arc, put a cost of one.
+        const fst::StdArc::Weight arcCost =
+            (j == 0) ? incomingArcs[i].cost() : fst::StdArc::Weight::One();
         nextStateId = tempres1.AddState();
         tempres1.AddArc(previousStateId,
-                    fst::StdArc((*words)[j], (*words)[j], fst::StdArc::Weight::One(),
-                                nextStateId));
+                        fst::StdArc((*words)[j], (*words)[j], arcCost, nextStateId));
         previousStateId = nextStateId;
       }
       openfstStatesToBeProcessed.push(nextStateId);

@@ -23,19 +23,10 @@ public:
   /**
    * Constructor.
    * @param key The key that uniquely defines the state.
-   */
-  State(StateKey* key);
-
-  /**
-   * Constructor.
-   * @param key The key that uniquely defines the state.
    * @param cost The cost.
+   * @param incomingArcs The incoming arcs.
    */
-  State(StateKey* key, Cost cost);
-
-  void setIncomingArcs(const std::vector<Arc>& incomingArcs) {
-    incomingArcs_ = incomingArcs;
-  }
+  State(StateKey* key, const Cost cost, const std::vector<Arc>& incomingArcs);
 
   /**
    * Redefine operator< to be able to have State as a key in a multiset. The

@@ -9,6 +9,7 @@
 #define ARC_H_
 
 #include <vector>
+#include "Types.h"
 
 namespace cam {
 namespace eng {
@@ -28,25 +29,33 @@ public:
    * @param origin The origin state
    * @param ngram The n-gram label
    */
-  Arc(State* origin, std::vector<int>* ngram);
+  Arc(State* origin, std::vector<int>* ngram, const Cost cost);
 
   /**
    * Getter
-   * @return The state.
+   * @return The origin state.
    */
   const State* state() const;
 
   /**
    * Getter.
-   * @return The n-gram.
+   * @return The n-gram label.
    */
   const std::vector<int>* ngram() const;
+
+  /**
+   * Getter.
+   * @return The cost of the arc.
+   */
+  const Cost cost() const;
 
 private:
   /** Pointer to the origin state of this arc.*/
   State* origin_;
   /** Label of the arc. Pointer for low memory consumption. */
   std::vector<int>* ngram_;
+  /** Cost of the arc: the probability of the ngram given a language model */
+  Cost cost_;
 };
 
 } // namespace gen
