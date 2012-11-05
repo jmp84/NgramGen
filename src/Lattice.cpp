@@ -68,8 +68,8 @@ void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
   lattice_.resize(words.size() + 1);
   languageModel_ = new lm::ngram::Model(lmfile.c_str());
   Coverage emptyCoverage(words.size());
-  lm::ngram::State beginSentenceState(languageModel_->BeginSentenceState());
-  StateKey* initStateKey = new StateKey(emptyCoverage, beginSentenceState);
+  lm::ngram::State initKenlmState(languageModel_->NullContextState());
+  StateKey* initStateKey = new StateKey(emptyCoverage, initKenlmState);
   State* initState = new State(initStateKey, 0, std::vector<Arc>());
   lattice_[0].statesIndexByStateKey_[*initStateKey] = initState;
   lattice_[0].statesSortedByCost_.insert(initState);
@@ -79,19 +79,29 @@ Cost Lattice::cost(const State& state, const vector<int>& ngram,
                    lm::ngram::State* nextKenlmState) const {
   Cost res = 0;
   lm::ngram::State startKenlmState = state.getKenlmState();
+  lm::ngram::State startKenlmStateTemp;
   const lm::ngram::Vocabulary& vocab = languageModel_->GetVocabulary();
   for (int i = 0; i < ngram.size(); i++) {
     std::string word;
     if (ngram[i] == 2) {
       word = "</s>";
     } else if (ngram[i] == 1) {
-      word = "<s>";
+      // TODO check here that i is zero: a start-of-sentence should be at the
+      // beginning of the n-gram
+      startKenlmStateTemp = languageModel_->BeginSentenceState();
+      continue;
     } else {
       word = boost::lexical_cast<std::string>(ngram[i]);
     }
-    res = languageModel_->Score(startKenlmState, vocab.Index(word),
-                                *nextKenlmState);
-    startKenlmState = *nextKenlmState;
+    if (i == 0) {
+      startKenlmStateTemp = startKenlmState;
+    } else if (i > 1 || ngram[0] != 1) {
+      startKenlmStateTemp = *nextKenlmState;
+    }
+    // else startKenlmStateTemp has been set to
+    // languageModel_->BeginSentenceState()
+    res += languageModel_->Score(startKenlmStateTemp, vocab.Index(word),
+                                 *nextKenlmState);
   }
   return res;
 }
@@ -105,6 +115,7 @@ void Lattice::extend(const NgramLoader& ngramLoader, int columnIndex) {
     for (std::map<std::vector<int>, std::vector<Coverage> >::const_iterator ngramIt =
         ngrams.begin(); ngramIt != ngrams.end(); ++ngramIt) {
       for (int i = 0; i < ngramIt->second.size(); i++) {
+        if ((*stateIt)->canApply(ngramIt->first, ngramIt->second[i]))
         if ((*stateIt)->overlap(ngramIt->second[i]) == 0) {
           extend(**stateIt, ngramIt->first, ngramIt->second[i]);
           // we break to use only the first coverage of the ngram to avoid
@@ -121,10 +132,10 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
   Coverage newCoverage = state.coverage() | coverage;
   int columnIndex = newCoverage.count();
   lm::ngram::State nextKenlmState;
-  Cost newCost = cost(state, ngram, &nextKenlmState);
-  Cost diffCost = newCost - state.cost();
+  Cost applyNgramCost = cost(state, ngram, &nextKenlmState) * (-log(10));
+  Cost newCost = state.cost() + applyNgramCost;
   Arc newArc(const_cast<State*>(&state), const_cast<std::vector<int>*>(&ngram),
-             diffCost);
+             applyNgramCost);
   StateKey* newStateKey = new StateKey(newCoverage, nextKenlmState);
   State* newState;
   std::map<StateKey, State*>::const_iterator findNewStateKey =
@@ -189,11 +200,10 @@ void Lattice::prune(int columnIndex, Cost threshold) {
 
 void Lattice::convert2openfst(int length, fst::StdVectorFst* res) {
   //this->print();
+  res->DeleteStates();
   typedef fst::StdArc::StateId StateId;
   // if there is no state in the last column, then failure, return a null fst.
   if (lattice_[length].empty()) {
-    delete res;
-    res = NULL;
     return;
   }
   res->DeleteStates();

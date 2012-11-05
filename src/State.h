@@ -37,13 +37,7 @@ public:
    */
   bool operator<(const State& other) const;
 
-  /**
-   * Computes the overlap between the coverage vector of this state and another
-   * coverage vector.
-   * @param ngram
-   * @return The overlap
-   */
-  int overlap(const Coverage& coverage) const;
+  bool canApply(const std::vector<int>& ngram, const Coverage& coverage) const;
 
   /**
    * Getter.
@@ -88,6 +82,14 @@ public:
   void addArc(const Arc& arc);
 
 private:
+  /**
+   * Computes the overlap between the coverage vector of this state and another
+   * coverage vector.
+   * @param ngram
+   * @return The overlap
+   */
+  int overlap(const Coverage& coverage) const;
+
   StateKey* stateKey_;
   Cost cost_;
   std::vector<Arc> incomingArcs_;
