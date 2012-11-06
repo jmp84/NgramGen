@@ -163,7 +163,7 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
   }
 }
 
-void Lattice::prune(int columnIndex, int nbest) {
+void Lattice::pruneNbest(int columnIndex, int nbest) {
   int count = 0;
   for (std::set<State*, StatePointerComparator>::iterator stateIterator =
       lattice_[columnIndex].statesSortedByCost_.begin();
@@ -178,7 +178,7 @@ void Lattice::prune(int columnIndex, int nbest) {
   }
 }
 
-void Lattice::prune(int columnIndex, Cost threshold) {
+void Lattice::pruneThreshold(int columnIndex, Cost threshold) {
   std::multiset<State*, StatePointerComparator>::iterator stateIterator =
       lattice_[columnIndex].statesSortedByCost_.begin();
   if (stateIterator == lattice_[columnIndex].statesSortedByCost_.end()) {

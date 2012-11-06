@@ -59,7 +59,7 @@ public:
    * @param columnIndex The index of the column to be pruned.
    * @param nbest The n-best threshold.
    */
-  void prune(int columnIndex, int nbest);
+  void pruneNbest(int columnIndex, int nbest);
 
   /**
    * Prune the column with index columnIndex. Keeps the states whose cost is
@@ -67,7 +67,7 @@ public:
    * @param columnIndex The index of the column to be pruned.
    * @param threshold The threshold.
    */
-  void prune(int columnIndex, Cost threshold);
+  void pruneThreshold(int columnIndex, Cost threshold);
 
   /**
    * Converts this lattice to an fst in openFST format.

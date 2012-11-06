@@ -29,6 +29,10 @@ DEFINE_string(ngrams, "", "Name of a file containing ngrams and coverages "
               "applicable to the input words");
 DEFINE_string(lm, "", "Language model file, in arpa or kenlm format.");
 DEFINE_bool(prune, false, "Should we prune or not ?");
+DEFINE_int32(prune_nbest, 0, "N-best pruning: number of states kept in a"
+             " column");
+DEFINE_double(prune_threshold, 0, "Threshold pruning: add this threshold to "
+              " the lowest cost in a column to define what states are kept.");
 DEFINE_string(fstoutput, "", "File name for the fst output.");
 
 namespace cam {
@@ -82,7 +86,11 @@ int main(int argc, char** argv) {
   lattice.init(inputWords, FLAGS_lm);
   for (int i = 0; i < inputWords.size(); i++) {
     if (FLAGS_prune) {
-      lattice.prune(i, 50);
+      if (FLAGS_prune_nbest != 0) {
+        lattice.pruneNbest(i, FLAGS_prune_nbest);
+      }else if (FLAGS_prune_threshold != 0) {
+        lattice.pruneThreshold(i, FLAGS_prune_threshold);
+      }
     }
     lattice.extend(ngramLoader, i);
   }
