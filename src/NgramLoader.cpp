@@ -5,13 +5,12 @@
  *      Author: jmp84
  */
 
+#include "NgramLoader.h"
+
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
-//#include <glog/logging.h>
-
-#include "NgramLoader.h"
-#include "Ngram.h"
+#include <glog/logging.h>
 
 namespace cam {
 namespace eng {
@@ -19,7 +18,7 @@ namespace gen {
 
 void NgramLoader::loadNgram(const std::string& fileName) {
   std::ifstream file(fileName.c_str());
-  //CHECK(file.is_open()) << "Cannot open file " << fileName;
+  CHECK(file.is_open()) << "Cannot open file " << fileName;
   std::string line;
   // skip the first two lines which are the ITG rules
   std::getline(file, line);
@@ -29,7 +28,8 @@ void NgramLoader::loadNgram(const std::string& fileName) {
   std::vector<int> ngramInt;
   while (std::getline(file, line)) {
     boost::split(parts, line, boost::is_any_of(" "));
-    //CHECK_EQ(parts.size(), 3) << "Wrong format, should have 3 parts: " << line;
+    CHECK_LE(3, parts.size()) << "Wrong format, should have at least 3 parts: "
+        << line;
     Coverage coverage(parts[1]);
     boost::split(ngramString, parts[2], boost::is_any_of("_"));
     ngramInt.resize(ngramString.size());

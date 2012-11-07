@@ -23,6 +23,10 @@ bool StateKey::operator<(const StateKey& other) const {
   return (kenlmState_ < other.kenlmState_);
 }
 
+const Coverage& StateKey::coverage() const {
+  return coverage_;
+}
+
 StateKey::StateKey(const Coverage& coverage,
                    const lm::ngram::State& kenlmState) :
                        coverage_(coverage), kenlmState_(kenlmState) {}

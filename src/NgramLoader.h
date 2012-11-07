@@ -17,8 +17,6 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-class Ngram;
-
 /**
  * Loads ngrams from an ngram file. The format of the file is as follows:
  * X X1_X2 X1_X2

@@ -15,24 +15,24 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-class Ngram;
 class State;
 
 /**
  * An arc between two states in a lattice. An arc is an incoming arc, there is
- * therefore only an origin.
+ * only an origin.
  */
 class Arc {
 public:
   /**
    * Constructor
-   * @param origin The origin state
-   * @param ngram The n-gram label
+   * @param origin The origin state.
+   * @param ngram The n-gram label.
+   * @param cost The cost.
    */
   Arc(State* origin, std::vector<int>* ngram, const Cost cost);
 
   /**
-   * Getter
+   * Getter.
    * @return The origin state.
    */
   const State* state() const;
@@ -54,7 +54,8 @@ private:
   State* origin_;
   /** Label of the arc. Pointer for low memory consumption. */
   std::vector<int>* ngram_;
-  /** Cost of the arc: the probability of the ngram given a language model */
+  /** Cost of the arc, e.g. the language model negative ln probability of the
+   * n-gram given the history of the origin state.*/
   Cost cost_;
 };
 

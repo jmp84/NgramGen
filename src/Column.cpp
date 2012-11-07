@@ -6,6 +6,8 @@
  */
 
 #include "Column.h"
+
+#include <glog/logging.h>
 #include "State.h"
 
 namespace cam {
@@ -14,16 +16,14 @@ namespace gen {
 
 bool StatePointerComparator::operator()(const State* s1,
                                         const State* s2) const {
-  return s1->cost() < s2->cost();
+  return (s1->cost() < s2->cost());
 }
 
-bool Column::empty() {
-  if (statesIndexByStateKey_.empty() && !statesSortedByCost_.empty()) {
-    // TODO throw exception or do a google check
-  }
-  if (!statesIndexByStateKey_.empty() && statesSortedByCost_.empty()) {
-    // TODO throw exception or do a google check
-  }
+bool Column::empty() const {
+  CHECK((statesIndexByStateKey_.empty() && statesSortedByCost_.empty()) ||
+        (!statesIndexByStateKey_.empty() && !statesSortedByCost_.empty())) <<
+            "The column state map and multiset should either be both empty or"
+            " both not empty.";
   return (statesIndexByStateKey_.empty() && statesSortedByCost_.empty());
 }
 

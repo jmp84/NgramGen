@@ -5,10 +5,12 @@
  *      Author: jmp84
  */
 
+#include "State.h"
+
 #include <iostream>
 
-#include "Ngram.h"
-#include "State.h"
+#include "Arc.h"
+#include "StateKey.h"
 #include "Types.h"
 
 namespace cam {
@@ -16,12 +18,8 @@ namespace eng {
 namespace gen {
 
 State::State(StateKey* stateKey, const Cost cost,
-             const std::vector<Arc>& incomingArcs) :
-                 stateKey_(stateKey), cost_(cost), incomingArcs_(incomingArcs) {}
-
-bool State::operator<(const State& other) const {
-  return (cost_ < other.cost_);
-}
+             const std::vector<Arc>& incomingArcs)
+  : stateKey_(stateKey), cost_(cost), incomingArcs_(incomingArcs) {}
 
 bool State::canApply(const std::vector<int>& ngram,
                      const Coverage& coverage) const {
@@ -32,7 +30,7 @@ bool State::canApply(const std::vector<int>& ngram,
   }
   // check that if the ngram starts with start-of-sentence, then the current
   // state is initial (that is, has an empty coverage)
-  if (ngram[0] == 1 && stateKey_->coverage_.any()) {
+  if (ngram[0] == 1 && !isInitial()) {
     return false;
   }
   // checks that if the ngram ends with end-of-sentence, then the resulting
@@ -45,18 +43,16 @@ bool State::canApply(const std::vector<int>& ngram,
   return true;
 }
 
-int State::overlap(const Coverage& coverage) const {
-  Coverage intersection =
-      stateKey_->coverage_ & coverage;
-  return intersection.count();
+void State::addArc(const Arc& arc) {
+  incomingArcs_.push_back(arc);
 }
 
-Cost State::cost() const {
+bool State::isInitial() const {
+  return (stateKey_->coverage_.none());
+}
+
+const Cost State::cost() const {
   return cost_;
-}
-
-void State::setCost(const Cost cost) {
-  cost_ = cost;
 }
 
 const Coverage& State::coverage() const {
@@ -67,7 +63,7 @@ const StateKey* State::stateKey() const {
   return stateKey_;
 }
 
-lm::ngram::State State::getKenlmState() const {
+const lm::ngram::State& State::getKenlmState() const {
   return stateKey_->kenlmState_;
 }
 
@@ -75,8 +71,10 @@ const std::vector<Arc>& State::incomingArcs() const {
   return incomingArcs_;
 }
 
-void State::addArc(const Arc& arc) {
-  incomingArcs_.push_back(arc);
+int State::overlap(const Coverage& coverage) const {
+  Coverage intersection =
+      stateKey_->coverage_ & coverage;
+  return intersection.count();
 }
 
 } // namespace gen

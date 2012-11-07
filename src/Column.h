@@ -24,10 +24,9 @@ struct StatePointerComparator {
 
 /**
  * A column in the lattice. A column has multiple states. We want to be able to
- * access these states in O(1) by a state key (history + coverage), so states
- * are indexed by StateKey in a map. We also need to sort these states by cost
- * for pruning so states are also sorted by their cost. The states are stored
- * in a set. The map simply contains pointers to these states.
+ * access these states quickly by a state key (history + coverage), so states
+ * are indexed by a StateKey in a map. We also need to sort these states by cost
+ * for pruning so states are also sorted by their cost in a multiset.
  */
 class Column {
 public:
@@ -35,7 +34,7 @@ public:
    * Checks if the column is empty, i.e. if it has no state.
    * @return
    */
-  bool empty();
+  bool empty() const;
 
 private:
   /** States indexed by StateKey (coverage + history). */

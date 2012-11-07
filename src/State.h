@@ -8,15 +8,20 @@
 #ifndef STATE_H_
 #define STATE_H_
 
-#include "Arc.h"
-#include "StateKey.h"
 #include "Types.h"
+
+namespace lm {
+namespace ngram {
+class State;
+}
+}
 
 namespace cam {
 namespace eng {
 namespace gen {
 
-class Ngram;
+class Arc;
+class StateKey;
 
 class State {
 public:
@@ -29,27 +34,31 @@ public:
   State(StateKey* key, const Cost cost, const std::vector<Arc>& incomingArcs);
 
   /**
-   * Redefine operator< to be able to have State as a key in a multiset. The
-   * comparison is simply based on cost.
-   * @param other The other state to compare to.
-   * @return true if the cost of this state is less than the cost of the other
-   * state.
+   * Checks if an n-gram with a certain coverage can extend the current state.
+   * Conditions are coverage compatibility and start/end-of-sentence markers.
+   * @param ngram
+   * @param coverage
+   * @return
    */
-  bool operator<(const State& other) const;
-
   bool canApply(const std::vector<int>& ngram, const Coverage& coverage) const;
+
+  /**
+   * Add an arc to the list of incoming arcs.
+   * @param arc The arc to be added to the list of incoming arcs.
+   */
+  void addArc(const Arc& arc);
+
+  /**
+   * Checks if a state is initial, that is if the coverage has no bit set.
+   * @return True if the coverage has no bit set, false otherwise.
+   */
+  bool isInitial() const;
 
   /**
    * Getter.
    * @return The cost.
    */
-  Cost cost() const;
-
-  /**
-   * Setter.
-   * @param cost The cost to be set.
-   */
-  void setCost(const Cost cost);
+  const Cost cost() const;
 
   /**
    * Getter.
@@ -67,19 +76,13 @@ public:
    * Getter.
    * @return The history (kenLM state) of the state key.
    */
-  lm::ngram::State getKenlmState() const;
+  const lm::ngram::State& getKenlmState() const;
 
   /**
    * Getter.
    * @return The list of incoming arcs.
    */
   const std::vector<Arc>& incomingArcs() const;
-
-  /**
-   * Add an arc to the list of incoming arcs.
-   * @param arc The arc to be added to the list of incoming arcs.
-   */
-  void addArc(const Arc& arc);
 
 private:
   /**
@@ -90,11 +93,12 @@ private:
    */
   int overlap(const Coverage& coverage) const;
 
+  /** A state key (pair coverage/history) that uniquely defines this state. */
   StateKey* stateKey_;
+  /** The best cost so far, or shortest distance from the initial state. */
   Cost cost_;
+  /** List of incoming arcs. */
   std::vector<Arc> incomingArcs_;
-
-  friend class Lattice;
 };
 
 } // namespace gen

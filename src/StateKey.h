@@ -35,6 +35,12 @@ public:
    */
   bool operator<(const StateKey& other) const;
 
+  /**
+   * Getter.
+   * @return The coverage.
+   */
+  const Coverage& coverage() const;
+
 private:
   /** Coverage of the input so far. */
   Coverage coverage_;
@@ -42,7 +48,6 @@ private:
   lm::ngram::State kenlmState_;
 
   friend class State;
-  friend class Lattice;
 };
 
 } // namespace gen
