@@ -8,7 +8,9 @@
 #include "Column.h"
 
 #include <glog/logging.h>
+
 #include "State.h"
+#include "StateKey.h"
 
 namespace cam {
 namespace eng {
@@ -17,6 +19,14 @@ namespace gen {
 bool StatePointerComparator::operator()(const State* s1,
                                         const State* s2) const {
   return (s1->cost() < s2->cost());
+}
+
+Column::~Column() {
+  for (std::map<StateKey, State*>::const_iterator it =
+      statesIndexByStateKey_.begin(); it != statesIndexByStateKey_.end();
+      ++it) {
+    delete it->second;
+  }
 }
 
 bool Column::empty() const {

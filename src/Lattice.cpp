@@ -23,6 +23,10 @@ namespace cam {
 namespace eng {
 namespace gen {
 
+Lattice::~Lattice() {
+  delete languageModel_;
+}
+
 void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
   lattice_.clear();
   lattice_.resize(words.size() + 1);
@@ -94,7 +98,6 @@ void Lattice::pruneThreshold(const int columnIndex, const Cost threshold) {
 }
 
 void Lattice::convert2openfst(const int length, fst::StdVectorFst* res) const {
-  DLOG(INFO) << "Lattice print out:" << std::endl << print();
   // clean up first
   res->DeleteStates();
   // if there is no state in the last column, then failure, return an empty fst.

@@ -34,6 +34,11 @@ public:
   State(StateKey* key, const Cost cost, const std::vector<Arc>& incomingArcs);
 
   /**
+   * Destructor.
+   */
+  ~State();
+
+  /**
    * Checks if an n-gram with a certain coverage can extend the current state.
    * Conditions are coverage compatibility and start/end-of-sentence markers.
    * @param ngram

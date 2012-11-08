@@ -31,6 +31,11 @@ struct StatePointerComparator {
 class Column {
 public:
   /**
+   * Destructor
+   */
+  ~Column();
+
+  /**
    * Checks if the column is empty, i.e. if it has no state.
    * @return
    */

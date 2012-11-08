@@ -38,6 +38,11 @@ public:
   typedef fst::StdArc::StateId StateId;
 
   /**
+   * Destructor.
+   */
+  ~Lattice();
+
+  /**
    * Initializes the lattice. Creates an empty array of size the size of the
    * input. Creates an initial state and adds it to the lattice.
    * @param words The input words to be reordered.

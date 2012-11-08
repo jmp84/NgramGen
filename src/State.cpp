@@ -21,6 +21,10 @@ State::State(StateKey* stateKey, const Cost cost,
              const std::vector<Arc>& incomingArcs)
   : stateKey_(stateKey), cost_(cost), incomingArcs_(incomingArcs) {}
 
+State::~State() {
+  delete stateKey_;
+}
+
 bool State::canApply(const std::vector<int>& ngram,
                      const Coverage& coverage) const {
   // check that the ngram has a disjoint coverage with the current coverage
