@@ -63,6 +63,9 @@ void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex) {
 }
 
 void Lattice::pruneNbest(const int columnIndex, const int nbest) {
+  CHECK_EQ(lattice_[columnIndex].statesIndexByStateKey_.size(),
+           lattice_[columnIndex].statesSortedByCost_.size()) <<
+               "Inconsistent number of states in column " << columnIndex;
   int count = 0;
   for (std::set<State*, StatePointerComparator>::iterator stateIterator =
       lattice_[columnIndex].statesSortedByCost_.begin();
@@ -78,6 +81,9 @@ void Lattice::pruneNbest(const int columnIndex, const int nbest) {
 }
 
 void Lattice::pruneThreshold(const int columnIndex, const Cost threshold) {
+  CHECK_EQ(lattice_[columnIndex].statesIndexByStateKey_.size(),
+           lattice_[columnIndex].statesSortedByCost_.size()) <<
+               "Inconsistent number of states in column " << columnIndex;
   std::multiset<State*, StatePointerComparator>::iterator stateIterator =
       lattice_[columnIndex].statesSortedByCost_.begin();
   if (stateIterator == lattice_[columnIndex].statesSortedByCost_.end()) {
@@ -143,25 +149,25 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
       lattice_[columnIndex].statesIndexByStateKey_.find(*newStateKey);
   if (findNewStateKey != lattice_[columnIndex].statesIndexByStateKey_.end()) {
     Cost existingCost = findNewStateKey->second->cost();
+    State* oldState = findNewStateKey->second;
     // if the new cost is smaller, then we need to remove the state from the
     // set containing states sorted by cost then reinsert a new state so the
     // ordering is still correct.
     if (newCost < existingCost) {
-      newState = new State(newStateKey, newCost,
-                           findNewStateKey->second->incomingArcs());
-      // TODO check that the number of states is equal
+      newState = new State(newStateKey, newCost, oldState->incomingArcs());
       lattice_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
-      lattice_[columnIndex].statesSortedByCost_.erase(findNewStateKey->second);
+      lattice_[columnIndex].statesSortedByCost_.erase(oldState);
       lattice_[columnIndex].statesSortedByCost_.insert(newState);
+      delete oldState;
     } else {
-      newState = findNewStateKey->second;
+      newState = oldState;
     }
     newState->addArc(newArc);
   } else {
     std::vector<Arc> incomingArcs(1, newArc);
     newState = new State(newStateKey, newCost, incomingArcs);
-    lattice_[columnIndex].statesSortedByCost_.insert(newState);
     lattice_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
+    lattice_[columnIndex].statesSortedByCost_.insert(newState);
   }
 }
 
