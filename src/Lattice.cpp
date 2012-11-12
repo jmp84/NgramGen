@@ -28,6 +28,7 @@ Lattice::~Lattice() {
 }
 
 void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
+  fst_.DeleteStates();
   lattice_.clear();
   lattice_.resize(words.size() + 1);
   languageModel_ = new lm::ngram::Model(lmfile.c_str());
@@ -37,7 +38,8 @@ void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
   // sentence begin marker.
   lm::ngram::State initKenlmState(languageModel_->NullContextState());
   StateKey* initStateKey = new StateKey(emptyCoverage, initKenlmState);
-  State* initState = new State(initStateKey, 0, std::vector<Arc>());
+  fst::StdArc::StateId startId = fst_.AddState();
+  State* initState = new State(startId, initStateKey, 0);
   lattice_[0].statesIndexByStateKey_[*initStateKey] = initState;
   lattice_[0].statesSortedByCost_.insert(initState);
 }
@@ -54,7 +56,9 @@ void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex) {
         if ((*stateIt)->canApply(ngramIt->first, ngramIt->second[i])) {
           extend(**stateIt, ngramIt->first, ngramIt->second[i]);
           // we break to use only the first coverage of the ngram to avoid
-          // spurious ambiguity
+          // spurious ambiguity (and therefore to have better pruning: e.g. if
+          // we keep 2 states in a column and the first two correspond to the
+          // same hypothesis)
           break;
         }
       }
@@ -73,6 +77,7 @@ void Lattice::pruneNbest(const int columnIndex, const int nbest) {
     count++;
     if (count > nbest) {
       lattice_[columnIndex].statesIndexByStateKey_.erase(*((*stateIterator)->stateKey()));
+      fst_.DeleteStates(std::vector<fst::StdArc::StateId>(1, (*stateIterator)->stateId()));
       lattice_[columnIndex].statesSortedByCost_.erase(stateIterator++);
     } else {
       ++stateIterator;
@@ -96,33 +101,12 @@ void Lattice::pruneThreshold(const int columnIndex, const Cost threshold) {
     if (cost > minCost + threshold) {
       lattice_[columnIndex].statesIndexByStateKey_.erase(
           *((*stateIterator)->stateKey()));
+      fst_.DeleteStates(std::vector<fst::StdArc::StateId>(1, (*stateIterator)->stateId()));
       lattice_[columnIndex].statesSortedByCost_.erase(stateIterator++);
     } else {
       ++stateIterator;
     }
   }
-}
-
-void Lattice::convert2openfst(const int length, fst::StdVectorFst* res) const {
-  // clean up first
-  res->DeleteStates();
-  // if there is no state in the last column, then failure, return an empty fst.
-  if (lattice_[length].empty()) {
-    return;
-  }
-  fst::StdVectorFst tempres1;
-  std::stack<State*> statesToBeProcessed;
-  std::stack<StateId> openfstStatesToBeProcessed;
-  // Add initial states and epsilon transitions to the lattice final states
-  convert2openfstInit(length, &statesToBeProcessed,
-                      &openfstStatesToBeProcessed, &tempres1);
-  while (!statesToBeProcessed.empty()) {
-    // Follows incoming arcs and processes the stacks.
-    convert2openfstProcess(&statesToBeProcessed, &openfstStatesToBeProcessed,
-                           &tempres1);
-  }
-  // some final fst operations
-  convert2openfstFinal(tempres1, res);
 }
 
 const string Lattice::print() const {
@@ -141,8 +125,8 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
   lm::ngram::State nextKenlmState;
   Cost applyNgramCost = cost(state, ngram, &nextKenlmState) * (-log(10));
   Cost newCost = state.cost() + applyNgramCost;
-  Arc newArc(const_cast<State*>(&state), const_cast<std::vector<int>*>(&ngram),
-             applyNgramCost);
+//  Arc newArc(const_cast<State*>(&state), const_cast<std::vector<int>*>(&ngram),
+//             applyNgramCost);
   StateKey* newStateKey = new StateKey(newCoverage, nextKenlmState);
   State* newState;
   std::map<StateKey, State*>::const_iterator findNewStateKey =

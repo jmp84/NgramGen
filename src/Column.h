@@ -45,7 +45,7 @@ private:
   /** States indexed by StateKey (coverage + history). */
   std::map<StateKey, State*> statesIndexByStateKey_;
   /** States sorted by their cost.*/
-  std::multiset<State*, StatePointerComparator> statesSortedByCost_;
+  std::set<State*, StatePointerComparator> statesSortedByCost_;
 
   friend class Lattice;
 };

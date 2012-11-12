@@ -27,11 +27,11 @@ class State {
 public:
   /**
    * Constructor.
+   * @param stateId The state id in openfst.
    * @param key The key that uniquely defines the state.
    * @param cost The cost.
-   * @param incomingArcs The incoming arcs.
    */
-  State(StateKey* key, const Cost cost, const std::vector<Arc>& incomingArcs);
+  State(fst::StdArc::StateId stateId, StateKey* key, const Cost cost);
 
   /**
    * Destructor.
@@ -58,6 +58,8 @@ public:
    * @return True if the coverage has no bit set, false otherwise.
    */
   bool isInitial() const;
+
+  const fst::StdArc::StateId stateId() const;
 
   /**
    * Getter.
@@ -98,12 +100,12 @@ private:
    */
   int overlap(const Coverage& coverage) const;
 
+  /** The state id in openfst. */
+  fst::StdArc::StateId stateId_;
   /** A state key (pair coverage/history) that uniquely defines this state. */
   StateKey* stateKey_;
   /** The best cost so far, or shortest distance from the initial state. */
   Cost cost_;
-  /** List of incoming arcs. */
-  std::vector<Arc> incomingArcs_;
 };
 
 } // namespace gen

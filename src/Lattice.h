@@ -143,6 +143,9 @@ private:
    */
   const string printColumn(int index) const;
 
+  /** The fst encoding the hypotheses. */
+  fst::StdVectorFst fst_;
+
   /** Lattice as a vector of columns. Indices indicate how many words have been
    * covered. */
   std::vector<Column> lattice_;

@@ -17,9 +17,8 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-State::State(StateKey* stateKey, const Cost cost,
-             const std::vector<Arc>& incomingArcs)
-  : stateKey_(stateKey), cost_(cost), incomingArcs_(incomingArcs) {}
+State::State(fst::StdArc::StateId stateId, StateKey* stateKey, const Cost cost)
+  : stateId_(stateId), stateKey_(stateKey), cost_(cost) {}
 
 State::~State() {
   delete stateKey_;
@@ -53,6 +52,10 @@ void State::addArc(const Arc& arc) {
 
 bool State::isInitial() const {
   return (stateKey_->coverage_.none());
+}
+
+const fst::StdArc::StateId stateId() const {
+  return stateId_;
 }
 
 const Cost State::cost() const {
