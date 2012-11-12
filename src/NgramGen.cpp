@@ -113,10 +113,9 @@ int main(int argc, char** argv) {
       }
       lattice.extend(ngramLoader, i);
     }
-    fst::StdVectorFst result;
-    lattice.convert2openfst(inputWords[id - 1].size(), &result);
+    lattice.compactFst();
     std::ostringstream output;
     output << FLAGS_fstoutput << "/" << id << ".fst";
-    result.Write(output.str());
+    lattice.write(output.str());
   }
 }

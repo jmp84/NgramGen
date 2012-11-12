@@ -8,6 +8,8 @@
 #ifndef STATE_H_
 #define STATE_H_
 
+#include <fst/fstlib.h>
+
 #include "Types.h"
 
 namespace lm {
@@ -48,17 +50,15 @@ public:
   bool canApply(const std::vector<int>& ngram, const Coverage& coverage) const;
 
   /**
-   * Add an arc to the list of incoming arcs.
-   * @param arc The arc to be added to the list of incoming arcs.
-   */
-  void addArc(const Arc& arc);
-
-  /**
    * Checks if a state is initial, that is if the coverage has no bit set.
    * @return True if the coverage has no bit set, false otherwise.
    */
   bool isInitial() const;
 
+  /**
+   * Getter.
+   * @return The openfst state id.
+   */
   const fst::StdArc::StateId stateId() const;
 
   /**
@@ -84,12 +84,6 @@ public:
    * @return The history (kenLM state) of the state key.
    */
   const lm::ngram::State& getKenlmState() const;
-
-  /**
-   * Getter.
-   * @return The list of incoming arcs.
-   */
-  const std::vector<Arc>& incomingArcs() const;
 
 private:
   /**

@@ -9,6 +9,7 @@
 #define LATTICE_H_
 
 #include <vector>
+#include <boost/smart_ptr.hpp>
 #include <lm/model.hh>
 #include <fst/fstlib.h>
 
@@ -38,9 +39,9 @@ public:
   typedef fst::StdArc::StateId StateId;
 
   /**
-   * Destructor.
+   * Constructor
    */
-  ~Lattice();
+  Lattice();
 
   /**
    * Initializes the lattice. Creates an empty array of size the size of the
@@ -75,16 +76,11 @@ public:
   void pruneThreshold(const int columnIndex, const Cost threshold);
 
   /**
-   * Converts this lattice to an fst in openFST format.
-   * @param length The length of the input from which this lattice was built.
-   * @param res The openfst fst result.
+   * Applies fst operations to get a compact fst.
    */
-  void convert2openfst(const int length, fst::StdVectorFst* res) const;
+  void compactFst();
 
-  /**
-   * Debug function to visualize the lattice.
-   */
-  const string print() const;
+  void write(const string& filename) const;
 
 private:
   /**
@@ -106,52 +102,15 @@ private:
   Cost cost(const State& state, const std::vector<int>& ngram,
             lm::ngram::State* nextKenlmState) const;
 
-  /**
-   * Helper function for convert2openfst. Initializes the conversion with final
-   * states.
-   * @param length Length of the input.
-   * @param statesToBeProcessed States to be processed in LIFO order.
-   * @param openfstStatesToBeProcessed OpenFST states to be processed in LIFO
-   * order.
-   * @param res The resulting OpenFST fst.
-   */
-  void convert2openfstInit(const int length,
-                           std::stack<State*>* statesToBeProcessed,
-                           std::stack<StateId>* openfstStatesToBeProcessed,
-                           fst::StdVectorFst* res) const;
-
-  /**
-   * Helper function for convert2openfst. Follows incoming arcs back.
-   * @param statesToBeProcessed States to be processed in LIFO order.
-   * @param openfstStatesToBeProcessed OpenFST states to be processed in LIFO
-   * order.
-   * @param res The resulting OpenFST fst.
-   */
-  void convert2openfstProcess(std::stack<State*>* statesToBeProcessed,
-                              std::stack<StateId>* openfstStatesToBeProcessed,
-                              fst::StdVectorFst* res) const;
-
-  /**
-   * Helper function for convert2openfst. Applies fst operations.
-   */
-  void convert2openfstFinal(const fst::StdVectorFst& tempres,
-                            fst::StdVectorFst* res) const;
-
-  /**
-   * Debug function to visualize the lattice.
-   * @param index The column index.
-   */
-  const string printColumn(int index) const;
-
   /** The fst encoding the hypotheses. */
-  fst::StdVectorFst fst_;
+  boost::scoped_ptr<fst::StdVectorFst> fst_;
 
   /** Lattice as a vector of columns. Indices indicate how many words have been
    * covered. */
   std::vector<Column> lattice_;
 
   /** Language model in KenLM format. */
-  lm::ngram::Model* languageModel_;
+  boost::scoped_ptr<lm::ngram::Model> languageModel_;
 };
 
 } // namespace gen

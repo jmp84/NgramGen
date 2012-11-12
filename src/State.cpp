@@ -46,15 +46,11 @@ bool State::canApply(const std::vector<int>& ngram,
   return true;
 }
 
-void State::addArc(const Arc& arc) {
-  incomingArcs_.push_back(arc);
-}
-
 bool State::isInitial() const {
   return (stateKey_->coverage_.none());
 }
 
-const fst::StdArc::StateId stateId() const {
+const fst::StdArc::StateId State::stateId() const {
   return stateId_;
 }
 
@@ -72,10 +68,6 @@ const StateKey* State::stateKey() const {
 
 const lm::ngram::State& State::getKenlmState() const {
   return stateKey_->kenlmState_;
-}
-
-const std::vector<Arc>& State::incomingArcs() const {
-  return incomingArcs_;
 }
 
 int State::overlap(const Coverage& coverage) const {
