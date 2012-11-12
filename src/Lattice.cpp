@@ -63,6 +63,9 @@ void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex) {
 }
 
 void Lattice::pruneNbest(const int columnIndex, const int nbest) {
+  CHECK_EQ(lattice_[columnIndex].statesIndexByStateKey_.size(),
+           lattice_[columnIndex].statesSortedByCost_.size()) <<
+               "Inconsistent number of states in column " << columnIndex;
   int count = 0;
   for (std::set<State*, StatePointerComparator>::iterator stateIterator =
       lattice_[columnIndex].statesSortedByCost_.begin();
@@ -78,6 +81,9 @@ void Lattice::pruneNbest(const int columnIndex, const int nbest) {
 }
 
 void Lattice::pruneThreshold(const int columnIndex, const Cost threshold) {
+  CHECK_EQ(lattice_[columnIndex].statesIndexByStateKey_.size(),
+           lattice_[columnIndex].statesSortedByCost_.size()) <<
+               "Inconsistent number of states in column " << columnIndex;
   std::multiset<State*, StatePointerComparator>::iterator stateIterator =
       lattice_[columnIndex].statesSortedByCost_.begin();
   if (stateIterator == lattice_[columnIndex].statesSortedByCost_.end()) {

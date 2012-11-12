@@ -18,7 +18,13 @@ namespace gen {
 
 bool StatePointerComparator::operator()(const State* s1,
                                         const State* s2) const {
-  return (s1->cost() < s2->cost());
+  if (s1->cost() < s2->cost()) {
+    return true;
+  }
+  if (s1->cost() > s2->cost()) {
+    return false;
+  }
+  return (s1->stateKey() < s2->stateKey());
 }
 
 Column::~Column() {
