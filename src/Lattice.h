@@ -15,6 +15,9 @@
 
 #include "Types.h"
 
+DECLARE_int32(prune_nbest);
+DECLARE_double(prune_threshold);
+
 namespace lm {
 namespace ngram {
 class State;
@@ -44,6 +47,11 @@ public:
   Lattice();
 
   /**
+   * Destructor. Custom destructor because one field is a pointer.
+   */
+  ~Lattice();
+
+  /**
    * Initializes the lattice. Creates an empty array of size the size of the
    * input. Creates an initial state and adds it to the lattice.
    * @param words The input words to be reordered.
@@ -61,19 +69,11 @@ public:
   void extend(const NgramLoader& ngramLoader, const int columnIndex);
 
   /**
-   * Prunes the column with index columnIndex. Keeps the n-best states.
-   * @param columnIndex The index of the column to be pruned.
-   * @param nbest The n-best threshold.
+   * Set final states for states that are in the column indexed by the length
+   * of the input.
+   * @param length The length of the input
    */
-  void pruneNbest(const int columnIndex, const int nbest);
-
-  /**
-   * Prunes the column with index columnIndex. Keeps the states whose cost is
-   * between the minimum cost and the minimum cost plus a threshold.
-   * @param columnIndex The index of the column to be pruned.
-   * @param threshold The threshold.
-   */
-  void pruneThreshold(const int columnIndex, const Cost threshold);
+  void markFinalStates(const int length);
 
   /**
    * Applies fst operations to get a compact fst.
@@ -110,7 +110,7 @@ private:
   std::vector<Column> lattice_;
 
   /** Language model in KenLM format. */
-  boost::scoped_ptr<lm::ngram::Model> languageModel_;
+  lm::ngram::Model* languageModel_;
 };
 
 } // namespace gen

@@ -23,13 +23,19 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-Lattice::Lattice() : fst_(new fst::StdVectorFst()) {}
+Lattice::Lattice() : fst_(new fst::StdVectorFst()) {
+  languageModel_ = NULL;
+}
+
+Lattice::~Lattice() {
+  delete languageModel_;
+}
 
 void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
   fst_->DeleteStates();
   lattice_.clear();
   lattice_.resize(words.size() + 1);
-  languageModel_.reset(new lm::ngram::Model(lmfile.c_str()));
+  languageModel_ = new lm::ngram::Model(lmfile.c_str());
   Coverage emptyCoverage(words.size());
   // We initialize with a null context rather than a sentence begin context
   // because if we chop an input sentence, then the first word might not be a
@@ -37,6 +43,7 @@ void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
   lm::ngram::State initKenlmState(languageModel_->NullContextState());
   StateKey* initStateKey = new StateKey(emptyCoverage, initKenlmState);
   fst::StdArc::StateId startId = fst_->AddState();
+  fst_->SetStart(startId);
   State* initState = new State(startId, initStateKey, 0);
   lattice_[0].statesIndexByStateKey_[*initStateKey] = initState;
   lattice_[0].statesSortedByCost_.insert(initState);
@@ -45,9 +52,22 @@ void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
 void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex) {
   const std::map<std::vector<int>, std::vector<Coverage> >& ngrams =
       ngramLoader.ngrams();
-  for (std::multiset<State*, StatePointerComparator>::const_iterator stateIt =
-      lattice_[columnIndex].statesSortedByCost_.begin();
-      stateIt != lattice_[columnIndex].statesSortedByCost_.end(); ++stateIt) {
+  std::set<State*, StatePointerComparator>::iterator stateIt =
+        lattice_[columnIndex].statesSortedByCost_.begin();
+  if (stateIt == lattice_[columnIndex].statesSortedByCost_.end()) {
+    return;
+  }
+  int numStates = 0;
+  Cost minCost = (*stateIt)->cost();
+  Cost beam = minCost + FLAGS_prune_threshold;
+  while (stateIt != lattice_[columnIndex].statesSortedByCost_.end()) {
+    numStates++;
+    if (FLAGS_prune_nbest > 0 && numStates > FLAGS_prune_nbest) {
+      break;
+    }
+    if (FLAGS_prune_threshold > 0 && (*stateIt)->cost() > beam) {
+      break;
+    }
     for (std::map<std::vector<int>, std::vector<Coverage> >::const_iterator ngramIt =
         ngrams.begin(); ngramIt != ngrams.end(); ++ngramIt) {
       for (int i = 0; i < ngramIt->second.size(); ++i) {
@@ -61,56 +81,27 @@ void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex) {
         }
       }
     }
+    ++stateIt;
   }
 }
 
-void Lattice::pruneNbest(const int columnIndex, const int nbest) {
-  CHECK_EQ(lattice_[columnIndex].statesIndexByStateKey_.size(),
-           lattice_[columnIndex].statesSortedByCost_.size()) <<
-               "Inconsistent number of states in column " << columnIndex;
-  int count = 0;
-  for (std::set<State*, StatePointerComparator>::iterator stateIterator =
-      lattice_[columnIndex].statesSortedByCost_.begin();
-      stateIterator != lattice_[columnIndex].statesSortedByCost_.end();) {
-    count++;
-    if (count > nbest) {
-      lattice_[columnIndex].statesIndexByStateKey_.erase(*((*stateIterator)->stateKey()));
-      fst_->DeleteStates(std::vector<fst::StdArc::StateId>(1, (*stateIterator)->stateId()));
-      lattice_[columnIndex].statesSortedByCost_.erase(stateIterator++);
-    } else {
-      ++stateIterator;
-    }
-  }
-}
-
-void Lattice::pruneThreshold(const int columnIndex, const Cost threshold) {
-  CHECK_EQ(lattice_[columnIndex].statesIndexByStateKey_.size(),
-           lattice_[columnIndex].statesSortedByCost_.size()) <<
-               "Inconsistent number of states in column " << columnIndex;
-  std::multiset<State*, StatePointerComparator>::iterator stateIterator =
-      lattice_[columnIndex].statesSortedByCost_.begin();
-  if (stateIterator == lattice_[columnIndex].statesSortedByCost_.end()) {
-    // the column is empty, nothing to be done
+void Lattice::markFinalStates(const int length) {
+  if (lattice_[length].empty()) {
+    // Failure, there are no final states
     return;
   }
-  Cost minCost = (*stateIterator)->cost();
-  while (stateIterator != lattice_[columnIndex].statesSortedByCost_.end()) {
-    Cost cost = (*stateIterator)->cost();
-    if (cost > minCost + threshold) {
-      lattice_[columnIndex].statesIndexByStateKey_.erase(
-          *((*stateIterator)->stateKey()));
-      fst_->DeleteStates(std::vector<fst::StdArc::StateId>(1, (*stateIterator)->stateId()));
-      lattice_[columnIndex].statesSortedByCost_.erase(stateIterator++);
-    } else {
-      ++stateIterator;
-    }
+  for (std::set<State*, StatePointerComparator>::const_iterator it =
+      lattice_[length].statesSortedByCost_.begin();
+      it != lattice_[length].statesSortedByCost_.end(); ++it) {
+    fst_->SetFinal((*it)->stateId(), fst::StdArc::Weight::One());
   }
 }
 
 void Lattice::compactFst() {
-  fst::StdVectorFst tempfst;
-  fst::Determinize(*fst_, &tempfst);
-  fst_.reset(&tempfst);
+  fst_->Write("tempres.fst");
+  fst::StdVectorFst* tempfst = new fst::StdVectorFst();
+  fst::Determinize(*fst_, tempfst);
+  fst_.reset(tempfst);
   fst::Minimize(fst_.get());
 }
 
@@ -122,10 +113,10 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
                      const Coverage& coverage) {
   Coverage newCoverage = state.coverage() | coverage;
   int columnIndex = newCoverage.count();
-  lm::ngram::State nextKenlmState;
-  Cost applyNgramCost = cost(state, ngram, &nextKenlmState) * (-log(10));
+  lm::ngram::State* nextKenlmState = new lm::ngram::State();
+  Cost applyNgramCost = cost(state, ngram, nextKenlmState) * (-log(10));
   Cost newCost = state.cost() + applyNgramCost;
-  StateKey* newStateKey = new StateKey(newCoverage, nextKenlmState);
+  StateKey* newStateKey = new StateKey(newCoverage, *nextKenlmState);
   State* newState;
   std::map<StateKey, State*>::const_iterator findNewStateKey =
       lattice_[columnIndex].statesIndexByStateKey_.find(*newStateKey);
@@ -154,7 +145,7 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
       }
       fst_->AddArc(previousStateId,
                   fst::StdArc(ngram[i], ngram[i],
-                              i == 0 ? applyNgramCost : fst::StdArc::Weight::One(),
+                              i == ngram.size() - 1 ? applyNgramCost : fst::StdArc::Weight::One(),
                               nextStateId));
       previousStateId = nextStateId;
     }
@@ -162,10 +153,10 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
     fst::StdArc::StateId previousStateId = state.stateId();
     fst::StdArc::StateId nextStateId;
     for (int i = 0; i < ngram.size(); ++i) {
-      fst::StdArc::StateId nextStateId = fst_->AddState();
+      nextStateId = fst_->AddState();
       fst_->AddArc(previousStateId,
                   fst::StdArc(ngram[i], ngram[i],
-                              i == 0 ? applyNgramCost : fst::StdArc::Weight::One(),
+                              i == ngram.size() - 1 ? applyNgramCost : fst::StdArc::Weight::One(),
                               nextStateId));
       previousStateId = nextStateId;
     }

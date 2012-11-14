@@ -26,7 +26,7 @@ struct StatePointerComparator {
  * A column in the lattice. A column has multiple states. We want to be able to
  * access these states quickly by a state key (history + coverage), so states
  * are indexed by a StateKey in a map. We also need to sort these states by cost
- * for pruning so states are also sorted by their cost in a multiset.
+ * for pruning so states are also sorted by their cost in a set.
  */
 class Column {
 public:

@@ -19,9 +19,6 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-/** Multiset input */
-typedef std::multiset<int> Multiset;
-
 /** Coverage vector of the input */
 typedef boost::dynamic_bitset<> Coverage;
 

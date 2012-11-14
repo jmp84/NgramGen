@@ -106,13 +106,9 @@ int main(int argc, char** argv) {
     lm << FLAGS_lm << "/" << id << "/lm.4.gz";
     lattice.init(inputWords[id - 1], lm.str());
     for (int i = 0; i < inputWords[id - 1].size(); ++i) {
-      if (FLAGS_prune_nbest != 0) {
-        lattice.pruneNbest(i, FLAGS_prune_nbest);
-      } else if (FLAGS_prune_threshold != 0) {
-        lattice.pruneThreshold(i, FLAGS_prune_threshold);
-      }
       lattice.extend(ngramLoader, i);
     }
+    lattice.markFinalStates(inputWords[id - 1].size());
     lattice.compactFst();
     std::ostringstream output;
     output << FLAGS_fstoutput << "/" << id << ".fst";

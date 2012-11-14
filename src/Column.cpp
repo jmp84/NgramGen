@@ -38,7 +38,7 @@ Column::~Column() {
 bool Column::empty() const {
   CHECK((statesIndexByStateKey_.empty() && statesSortedByCost_.empty()) ||
         (!statesIndexByStateKey_.empty() && !statesSortedByCost_.empty())) <<
-            "The column state map and multiset should either be both empty or"
+            "The column state map and set should either be both empty or"
             " both not empty.";
   return (statesIndexByStateKey_.empty() && statesSortedByCost_.empty());
 }
