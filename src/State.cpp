@@ -9,7 +9,6 @@
 
 #include <iostream>
 
-#include "Arc.h"
 #include "StateKey.h"
 #include "Types.h"
 
@@ -17,14 +16,14 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-State::State(fst::StdArc::StateId stateId, StateKey* stateKey, const Cost cost)
+State::State(StateId stateId, StateKey* stateKey, const Cost cost)
   : stateId_(stateId), stateKey_(stateKey), cost_(cost) {}
 
 State::~State() {
   delete stateKey_;
 }
 
-bool State::canApply(const std::vector<int>& ngram,
+bool State::canApply(const Ngram& ngram,
                      const Coverage& coverage) const {
   // check that the ngram has a disjoint coverage with the current coverage
   int ol = overlap(coverage);

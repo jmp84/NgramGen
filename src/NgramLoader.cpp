@@ -25,7 +25,7 @@ void NgramLoader::loadNgram(const std::string& fileName) {
   std::getline(file, line);
   std::vector<std::string> parts;
   std::vector<std::string> ngramString;
-  std::vector<int> ngramInt;
+  Ngram ngramInt;
   while (std::getline(file, line)) {
     boost::split(parts, line, boost::is_any_of(" "));
     CHECK_LE(3, parts.size()) << "Wrong format, should have at least 3 parts: "
@@ -39,7 +39,7 @@ void NgramLoader::loadNgram(const std::string& fileName) {
   }
 }
 
-const std::map<std::vector<int>, std::vector<Coverage> >& NgramLoader::ngrams() const {
+const std::map<Ngram, std::vector<Coverage> >& NgramLoader::ngrams() const {
   return ngrams_;
 }
 

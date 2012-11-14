@@ -18,6 +18,9 @@ namespace gen {
 class State;
 class StateKey;
 
+/**
+ * State pointer comparator used to be able to use State* as a key in a set.
+ */
 struct StatePointerComparator {
   bool operator()(const State* s1, const State* s2) const;
 };
@@ -31,7 +34,7 @@ struct StatePointerComparator {
 class Column {
 public:
   /**
-   * Destructor
+   * Destructor. Custom destructor to delete states.
    */
   ~Column();
 

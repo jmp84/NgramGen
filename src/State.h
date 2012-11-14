@@ -22,32 +22,33 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-class Arc;
 class StateKey;
 
 class State {
 public:
+  typedef fst::StdArc::StateId StateId;
   /**
    * Constructor.
    * @param stateId The state id in openfst.
    * @param key The key that uniquely defines the state.
    * @param cost The cost.
    */
-  State(fst::StdArc::StateId stateId, StateKey* key, const Cost cost);
+  State(StateId stateId, StateKey* key, const Cost cost);
 
   /**
-   * Destructor.
+   * Destructor. Custom destructor to delete the state key pointer.
    */
   ~State();
 
   /**
    * Checks if an n-gram with a certain coverage can extend the current state.
    * Conditions are coverage compatibility and start/end-of-sentence markers.
-   * @param ngram
-   * @param coverage
-   * @return
+   * @param ngram The n-gram extending the current state.
+   * @param coverage The coverage of the n-gram.
+   * @return True if the current state can be extended with the n-gram and
+   * coverage.
    */
-  bool canApply(const std::vector<int>& ngram, const Coverage& coverage) const;
+  bool canApply(const Ngram& ngram, const Coverage& coverage) const;
 
   /**
    * Checks if a state is initial, that is if the coverage has no bit set.
@@ -59,7 +60,7 @@ public:
    * Getter.
    * @return The openfst state id.
    */
-  const fst::StdArc::StateId stateId() const;
+  const StateId stateId() const;
 
   /**
    * Getter.
@@ -95,7 +96,7 @@ private:
   int overlap(const Coverage& coverage) const;
 
   /** The state id in openfst. */
-  fst::StdArc::StateId stateId_;
+  StateId stateId_;
   /** A state key (pair coverage/history) that uniquely defines this state. */
   StateKey* stateKey_;
   /** The best cost so far, or shortest distance from the initial state. */

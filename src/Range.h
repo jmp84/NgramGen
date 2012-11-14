@@ -12,12 +12,6 @@
 #include <glog/logging.h>
 #include <fst/compat.h>
 
-/**
- * \brief Generates ranges  from a compact string parameter such as 1,3:5,10
- * \param range A key string such as 1,3:5,10, describing a range of values.
- * \param x A vector containing explicitly the integers we care about
- */
-
 namespace cam {
 namespace eng {
 namespace gen {
@@ -49,7 +43,7 @@ inline void getRange(const std::string& range, std::vector<int>* res) {
       res->push_back(k);
     }
   }
-};
+}
 
 /**
  * Interface for an arbitrary range of integers.

@@ -39,14 +39,14 @@ public:
    * Getter.
    * @return The ngrams.
    */
-  const std::map<std::vector<int>, std::vector<Coverage> >& ngrams() const;
+  const std::map<Ngram, std::vector<Coverage> >& ngrams() const;
 
 private:
   /**
    * Map between an n-gram (sequence of words) and coverages. There may be
    * multiple coverages if a word in the input is repeated.
    */
-  std::map<std::vector<int>, std::vector<Coverage> > ngrams_;
+  std::map<Ngram, std::vector<Coverage> > ngrams_;
 
 };
 

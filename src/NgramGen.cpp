@@ -89,6 +89,7 @@ void checkArgs(int argc, char** argv) {
  * This is the main program.
  */
 int main(int argc, char** argv) {
+  google::InitGoogleLogging(argv[0]);
   using namespace cam::eng::gen;
   checkArgs(argc, argv);
   std::vector<std::vector<int> > inputWords;
@@ -97,6 +98,7 @@ int main(int argc, char** argv) {
       IntegerRangeInterface::initFactory(FLAGS_range));
       !ir->done(); ir->next()) {
     int id = ir->get();
+    LOG(INFO) << "Processing sentence number " << id;
     NgramLoader ngramLoader;
     std::ostringstream ngrams;
     ngrams << FLAGS_ngrams << "/"<< id << ".r";

@@ -18,6 +18,7 @@ namespace gen {
 
 bool StatePointerComparator::operator()(const State* s1,
                                         const State* s2) const {
+  // first compare by cost, then compare by state key (coverage + history)
   if (s1->cost() < s2->cost()) {
     return true;
   }

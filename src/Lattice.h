@@ -10,11 +10,12 @@
 
 #include <vector>
 #include <boost/smart_ptr.hpp>
-#include <lm/model.hh>
 #include <fst/fstlib.h>
+#include <lm/model.hh>
 
 #include "Types.h"
 
+// pruning parameters
 DECLARE_int32(prune_nbest);
 DECLARE_double(prune_threshold);
 
@@ -80,6 +81,10 @@ public:
    */
   void compactFst();
 
+  /**
+   * Write the output fst to a file.
+   * @param filename The file name where to write the output fst.
+   */
   void write(const string& filename) const;
 
 private:
@@ -97,7 +102,7 @@ private:
    * @param state The state to be extended with an ngram.
    * @param ngram The ngram used to extend the state.
    * @param nextKenlmState The kenlm state we end up in.
-   * @return The score
+   * @return The cost which the original cost + the cost of the n-gram.
    */
   Cost cost(const State& state, const std::vector<int>& ngram,
             lm::ngram::State* nextKenlmState) const;

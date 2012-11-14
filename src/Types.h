@@ -25,6 +25,9 @@ typedef boost::dynamic_bitset<> Coverage;
 /** Cost. Could use a double if needed. */
 typedef float Cost;
 
+/** An n-gram. */
+typedef std::vector<int> Ngram;
+
 } // namespace gen
 } // namespace eng
 } // namespace cam

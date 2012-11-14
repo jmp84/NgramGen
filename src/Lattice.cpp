@@ -9,10 +9,8 @@
 
 #include <map>
 #include <boost/lexical_cast.hpp>
-#include <boost/smart_ptr.hpp>
 #include <lm/state.hh>
 
-#include "Arc.h"
 #include "Column.h"
 #include "NgramLoader.h"
 #include "State.h"
@@ -42,7 +40,7 @@ void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
   // sentence begin marker.
   lm::ngram::State initKenlmState(languageModel_->NullContextState());
   StateKey* initStateKey = new StateKey(emptyCoverage, initKenlmState);
-  fst::StdArc::StateId startId = fst_->AddState();
+  StateId startId = fst_->AddState();
   fst_->SetStart(startId);
   State* initState = new State(startId, initStateKey, 0);
   lattice_[0].statesIndexByStateKey_[*initStateKey] = initState;
@@ -50,9 +48,9 @@ void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
 }
 
 void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex) {
-  const std::map<std::vector<int>, std::vector<Coverage> >& ngrams =
+  const std::map<Ngram, std::vector<Coverage> >& ngrams =
       ngramLoader.ngrams();
-  std::set<State*, StatePointerComparator>::iterator stateIt =
+  std::set<State*, StatePointerComparator>::const_iterator stateIt =
         lattice_[columnIndex].statesSortedByCost_.begin();
   if (stateIt == lattice_[columnIndex].statesSortedByCost_.end()) {
     return;
@@ -68,7 +66,7 @@ void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex) {
     if (FLAGS_prune_threshold > 0 && (*stateIt)->cost() > beam) {
       break;
     }
-    for (std::map<std::vector<int>, std::vector<Coverage> >::const_iterator ngramIt =
+    for (std::map<Ngram, std::vector<Coverage> >::const_iterator ngramIt =
         ngrams.begin(); ngramIt != ngrams.end(); ++ngramIt) {
       for (int i = 0; i < ngramIt->second.size(); ++i) {
         if ((*stateIt)->canApply(ngramIt->first, ngramIt->second[i])) {
@@ -98,7 +96,6 @@ void Lattice::markFinalStates(const int length) {
 }
 
 void Lattice::compactFst() {
-  fst_->Write("tempres.fst");
   fst::StdVectorFst* tempfst = new fst::StdVectorFst();
   fst::Determinize(*fst_, tempfst);
   fst_.reset(tempfst);
@@ -109,7 +106,7 @@ void Lattice::write(const string& filename) const {
   fst_->Write(filename);
 }
 
-void Lattice::extend(const State& state, const vector<int>& ngram,
+void Lattice::extend(const State& state, const Ngram& ngram,
                      const Coverage& coverage) {
   Coverage newCoverage = state.coverage() | coverage;
   int columnIndex = newCoverage.count();
@@ -117,10 +114,12 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
   Cost applyNgramCost = cost(state, ngram, nextKenlmState) * (-log(10));
   Cost newCost = state.cost() + applyNgramCost;
   StateKey* newStateKey = new StateKey(newCoverage, *nextKenlmState);
+  delete nextKenlmState;
   State* newState;
   std::map<StateKey, State*>::const_iterator findNewStateKey =
       lattice_[columnIndex].statesIndexByStateKey_.find(*newStateKey);
   if (findNewStateKey != lattice_[columnIndex].statesIndexByStateKey_.end()) {
+    // first case: the new coverage and history already exist
     Cost existingCost = findNewStateKey->second->cost();
     State* oldState = findNewStateKey->second;
     // if the new cost is smaller, then we need to remove the state from the
@@ -133,31 +132,35 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
       lattice_[columnIndex].statesSortedByCost_.insert(newState);
       delete oldState;
     } else {
+      delete newStateKey;
       newState = oldState;
     }
-    fst::StdArc::StateId previousStateId = state.stateId();
-    fst::StdArc::StateId nextStateId;
+    // Now add states and arc for the n-gram
+    StateId previousStateId = state.stateId();
+    StateId nextStateId;
+    fst::StdArc::Weight arcCost;
     for (int i = 0; i < ngram.size(); ++i) {
       if (i == ngram.size() - 1) {
         nextStateId = newState->stateId();
+        arcCost = applyNgramCost;
       } else {
         nextStateId = fst_->AddState();
+        arcCost = fst::StdArc::Weight::One();
       }
       fst_->AddArc(previousStateId,
-                  fst::StdArc(ngram[i], ngram[i],
-                              i == ngram.size() - 1 ? applyNgramCost : fst::StdArc::Weight::One(),
-                              nextStateId));
+                  fst::StdArc(ngram[i], ngram[i], arcCost, nextStateId));
       previousStateId = nextStateId;
     }
   } else {
-    fst::StdArc::StateId previousStateId = state.stateId();
-    fst::StdArc::StateId nextStateId;
+    // second case: the new coverage and history don't already exist
+    StateId previousStateId = state.stateId();
+    StateId nextStateId;
+    fst::StdArc::Weight arcCost;
     for (int i = 0; i < ngram.size(); ++i) {
+      arcCost = (i == ngram.size() - 1) ? applyNgramCost : fst::StdArc::Weight::One();
       nextStateId = fst_->AddState();
       fst_->AddArc(previousStateId,
-                  fst::StdArc(ngram[i], ngram[i],
-                              i == ngram.size() - 1 ? applyNgramCost : fst::StdArc::Weight::One(),
-                              nextStateId));
+                  fst::StdArc(ngram[i], ngram[i], arcCost, nextStateId));
       previousStateId = nextStateId;
     }
     newState = new State(nextStateId, newStateKey, newCost);
@@ -166,7 +169,7 @@ void Lattice::extend(const State& state, const vector<int>& ngram,
   }
 }
 
-Cost Lattice::cost(const State& state, const vector<int>& ngram,
+Cost Lattice::cost(const State& state, const Ngram& ngram,
                    lm::ngram::State* nextKenlmState) const {
   Cost res = 0;
   lm::ngram::State startKenlmStateTemp;
