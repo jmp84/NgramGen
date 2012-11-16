@@ -13,6 +13,8 @@
  */
 
 #include <set>
+// this is to be able to use the raw bits as input to a hash function
+#define BOOST_DYNAMIC_BITSET_DONT_USE_FRIENDS
 #include "boost/dynamic_bitset.hpp"
 
 namespace cam {

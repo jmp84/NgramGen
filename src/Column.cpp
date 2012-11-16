@@ -29,7 +29,7 @@ bool StatePointerComparator::operator()(const State* s1,
 }
 
 Column::~Column() {
-  for (std::map<StateKey, State*>::const_iterator it =
+  for (boost::unordered_map<StateKey, State*>::const_iterator it =
       statesIndexByStateKey_.begin(); it != statesIndexByStateKey_.end();
       ++it) {
     delete it->second;

@@ -116,7 +116,7 @@ void Lattice::extend(const State& state, const Ngram& ngram,
   StateKey* newStateKey = new StateKey(newCoverage, *nextKenlmState);
   delete nextKenlmState;
   State* newState;
-  std::map<StateKey, State*>::const_iterator findNewStateKey =
+  boost::unordered_map<StateKey, State*>::const_iterator findNewStateKey =
       lattice_[columnIndex].statesIndexByStateKey_.find(*newStateKey);
   if (findNewStateKey != lattice_[columnIndex].statesIndexByStateKey_.end()) {
     // first case: the new coverage and history already exist

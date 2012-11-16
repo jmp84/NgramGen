@@ -8,8 +8,8 @@
 #ifndef COLUMN_H_
 #define COLUMN_H_
 
-#include <map>
 #include <set>
+#include <boost/unordered_map.hpp>
 
 namespace cam {
 namespace eng {
@@ -46,7 +46,7 @@ public:
 
 private:
   /** States indexed by StateKey (coverage + history). */
-  std::map<StateKey, State*> statesIndexByStateKey_;
+  boost::unordered_map<StateKey, State*> statesIndexByStateKey_;
   /** States sorted by their cost.*/
   std::set<State*, StatePointerComparator> statesSortedByCost_;
 

@@ -29,11 +29,11 @@ public:
   StateKey(const Coverage& coverage, const lm::ngram::State& kenlmState);
 
   /**
-   * Redefine operator< to be able to have StateKey as a key in a map.
-   * @param other The other StateKey to be compared to.
-   * @return true if this object is less than the other one.
+   * Redefine operator== to be able to use StateKey in an unordered_map
+   * @param other The other StateKey to compare to.
+   * @return true if this object is equal to the other one.
    */
-  bool operator<(const StateKey& other) const;
+  bool operator==(const StateKey& other) const;
 
   /**
    * Getter.
@@ -48,7 +48,15 @@ private:
   lm::ngram::State kenlmState_;
 
   friend class State;
+  friend std::size_t hash_value(const StateKey& stateKey);
 };
+
+/**
+ * Hash function to be used in an unordered_map.
+ * @param stateKey The key to hash.
+ * @return The hash value.
+ */
+std::size_t hash_value(const StateKey& stateKey);
 
 } // namespace gen
 } // namespace eng
