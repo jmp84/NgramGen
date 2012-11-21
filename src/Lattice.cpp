@@ -48,6 +48,9 @@ void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
 }
 
 void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex) {
+  CHECK_EQ(lattice_[columnIndex].statesIndexByStateKey_.size(),
+           lattice_[columnIndex].statesSortedByCost_.size()) <<
+               "Inconsistent number of states in column " << columnIndex;
   const std::map<Ngram, std::vector<Coverage> >& ngrams =
       ngramLoader.ngrams();
   std::set<State*, StatePointerComparator>::const_iterator stateIt =
