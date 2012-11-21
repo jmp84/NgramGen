@@ -17,6 +17,11 @@
 #include "StateKey.h"
 #include "Types.h"
 
+DEFINE_int32(prune_nbest, 0, "N-best pruning: number of states kept in a"
+             " column");
+DEFINE_double(prune_threshold, 0, "Threshold pruning: add this threshold to "
+              " the lowest cost in a column to define what states are kept.");
+
 namespace cam {
 namespace eng {
 namespace gen {

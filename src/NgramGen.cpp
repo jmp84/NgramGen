@@ -28,12 +28,12 @@ DEFINE_string(sentenceFile, "",
 DEFINE_string(ngrams, "", "Name of a directory containing ngram and coverage "
               "files applicable to the input words");
 DEFINE_string(lm, "", "Language model file directory, in arpa or kenlm format.");
-DEFINE_int32(prune_nbest, 0, "N-best pruning: number of states kept in a"
-             " column");
-DEFINE_double(prune_threshold, 0, "Threshold pruning: add this threshold to "
-              " the lowest cost in a column to define what states are kept.");
 DEFINE_string(fstoutput, "", "Directory name for the fst outputs.");
 DEFINE_string(range, "1", "Range of items to be processed");
+
+// pruning parameters
+DECLARE_int32(prune_nbest);
+DECLARE_double(prune_threshold);
 
 namespace cam {
 namespace eng {
