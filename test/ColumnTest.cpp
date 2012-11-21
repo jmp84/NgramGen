@@ -9,7 +9,11 @@
 #include "Column.h"
 #include "StateKey.h"
 
-TEST(emptyTest, Vanilla) {
+namespace {
+
+TEST(emptyTest, simple) {
   cam::eng::gen::Column c;
   EXPECT_TRUE(c.empty());
 }
+
+} // namespace

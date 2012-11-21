@@ -31,9 +31,16 @@ public:
   /**
    * Redefine operator== to be able to use StateKey in an unordered_map
    * @param other The other StateKey to compare to.
-   * @return true if this object is equal to the other one.
+   * @return True if this object is equal to the other one.
    */
   bool operator==(const StateKey& other) const;
+
+  /**
+   * Redefine operator< to be able to use StateKey for State pointer comparison
+   * @param other The other StateKey to compare to.
+   * @return True if this object is less than the other one.
+   */
+  bool operator<(const StateKey& other) const;
 
   /**
    * Getter.

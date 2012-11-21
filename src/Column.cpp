@@ -25,7 +25,7 @@ bool StatePointerComparator::operator()(const State* s1,
   if (s1->cost() > s2->cost()) {
     return false;
   }
-  return (s1->stateKey() < s2->stateKey());
+  return (*(s1->stateKey()) < *(s2->stateKey()));
 }
 
 Column::~Column() {
