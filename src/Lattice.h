@@ -15,10 +15,6 @@
 
 #include "Types.h"
 
-// pruning parameters
-DECLARE_int32(prune_nbest);
-DECLARE_double(prune_threshold);
-
 namespace lm {
 namespace ngram {
 class State;
@@ -40,12 +36,17 @@ class State;
  */
 class Lattice {
 public:
+  friend class LatticeTest;
+
   typedef fst::StdArc::StateId StateId;
 
   /**
-   * Constructor
+   * Constructor. Creates an empty array of size the size of the input. Creates
+   * an initial state and adds it to the lattice.
+   * @param words The input words to be reordered.
+   * @param lmfile The language model file (in arpa or kenlm format).
    */
-  Lattice();
+  Lattice(const std::vector<int>& words, const std::string& lmfile);
 
   /**
    * Destructor. Custom destructor because one field is a pointer.
@@ -53,21 +54,19 @@ public:
   ~Lattice();
 
   /**
-   * Initializes the lattice. Creates an empty array of size the size of the
-   * input. Creates an initial state and adds it to the lattice.
-   * @param words The input words to be reordered.
-   * @param lmfile The language model file (in arpa or kenlm format).
-   */
-  void init(const std::vector<int>& words, const std::string& lmfile);
-
-  /**
    * Extends a column by extending all states in the column with the n-grams
    * provided by an n-gram loader.
    * @param ngramLoader The ngram loader that contains a list of n-grams with
    * coverage.
    * @param columnIndex The index of the column to be extended.
+   * @param pruneNbest The nbest pruning threshold
+   * @param pruneThreshold The float pruning threshold
+   * @param maxOverlap The maximum overlap between state coverage and n-gram
+   * coverage
    */
-  void extend(const NgramLoader& ngramLoader, const int columnIndex);
+  void extend(const NgramLoader& ngramLoader, const int columnIndex,
+              const int pruneNbest, const float pruneThreshold,
+              const int maxOverlap);
 
   /**
    * Set final states for states that are in the column indexed by the length
@@ -89,6 +88,35 @@ public:
 
 private:
   /**
+   * In case of overlap, checks if the history of a state is compatible with an
+   * n-gram.
+   * @param state The state to be potentially extended with n-gram.
+   * @param ngram The n-gram used to potentially extend the state.
+   * @param overlap The overlap between the n-gram coverage and the
+   * state coverage
+   * @param overlapCount The number of bits set in overlap.
+   * @return True if the history of the state is compatible with the n-gram.
+   */
+  bool compatibleHistory(const State& state, const Ngram& ngram,
+                         const Coverage& overlap, const int overlapCount) const;
+
+  /**
+   * Checks if an n-gram with a certain coverage can extend a state.
+   * Conditions are coverage compatibility and start/end-of-sentence markers.
+   * @param state The state to be extended.
+   * @param ngram The n-gram extending the current state.
+   * @param coverage The coverage of the n-gram.
+   * @param maxOverlap The maximum overlap between state coverage and n-gram
+   * coverage.
+   * @param ngramToApply The n-gram to be applied to the state. This n-gram is
+   * truncated if there is a non trivial overlap.
+   * @return True if the state can be extended with the n-gram and coverage.
+   */
+  bool canApply(const State& state, const Ngram& ngram,
+                const Coverage& coverage, const int maxOverlap,
+                Ngram* ngramToApply) const;
+
+  /**
    * Extends a state with an n-gram.
    * @param state The state to be extended.
    * @param ngram The n-gram used to extend the state.
@@ -107,6 +135,14 @@ private:
   Cost cost(const State& state, const std::vector<int>& ngram,
             lm::ngram::State* nextKenlmState) const;
 
+  /**
+   * Utility to compute the index in kenlm vocab from an integer id. This is a
+   * bit inefficient. It should be possible to reuse the id directly.
+   * @param id
+   * @return The index in kenlm vocab.
+   */
+  const lm::WordIndex index(int id) const;
+
   /** The fst encoding the hypotheses. */
   boost::scoped_ptr<fst::StdVectorFst> fst_;
 
@@ -116,6 +152,9 @@ private:
 
   /** Language model in KenLM format. */
   lm::ngram::Model* languageModel_;
+
+  /** Input words to be reordered. */
+  std::vector<int> inputWords_;
 };
 
 } // namespace gen

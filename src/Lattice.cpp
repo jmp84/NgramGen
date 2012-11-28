@@ -17,28 +17,19 @@
 #include "StateKey.h"
 #include "Types.h"
 
-DEFINE_int32(prune_nbest, 0, "N-best pruning: number of states kept in a"
-             " column");
-DEFINE_double(prune_threshold, 0, "Threshold pruning: add this threshold to "
-              " the lowest cost in a column to define what states are kept.");
-
 namespace cam {
 namespace eng {
 namespace gen {
 
-Lattice::Lattice() : fst_(new fst::StdVectorFst()) {
-  languageModel_ = NULL;
-}
+// start and end-of-sentence symbols
+enum {
+  STARTSENTENCE = 1,
+  ENDSENTENCE = 2
+};
 
-Lattice::~Lattice() {
-  delete languageModel_;
-}
-
-void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
-  fst_->DeleteStates();
-  lattice_.clear();
-  lattice_.resize(words.size() + 1);
-  languageModel_ = new lm::ngram::Model(lmfile.c_str());
+Lattice::Lattice(const std::vector<int>& words, const std::string& lmfile) :
+    fst_(new fst::StdVectorFst()), lattice_(words.size() + 1),
+    languageModel_(new lm::ngram::Model(lmfile.c_str())), inputWords_(words) {
   Coverage emptyCoverage(words.size());
   // We initialize with a null context rather than a sentence begin context
   // because if we chop an input sentence, then the first word might not be a
@@ -52,7 +43,13 @@ void Lattice::init(const std::vector<int>& words, const std::string& lmfile) {
   lattice_[0].statesSortedByCost_.insert(initState);
 }
 
-void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex) {
+Lattice::~Lattice() {
+  delete languageModel_;
+}
+
+void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex,
+                     const int pruneNbest, const float pruneThreshold,
+                     const int maxOverlap) {
   CHECK_EQ(lattice_[columnIndex].statesIndexByStateKey_.size(),
            lattice_[columnIndex].statesSortedByCost_.size()) <<
                "Inconsistent number of states in column " << columnIndex;
@@ -65,20 +62,22 @@ void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex) {
   }
   int numStates = 0;
   Cost minCost = (*stateIt)->cost();
-  Cost beam = minCost + FLAGS_prune_threshold;
+  Cost beam = minCost + pruneThreshold;
   while (stateIt != lattice_[columnIndex].statesSortedByCost_.end()) {
     numStates++;
-    if (FLAGS_prune_nbest > 0 && numStates > FLAGS_prune_nbest) {
+    if (pruneNbest > 0 && numStates > pruneNbest) {
       break;
     }
-    if (FLAGS_prune_threshold > 0 && (*stateIt)->cost() > beam) {
+    if (pruneThreshold > 0 && (*stateIt)->cost() > beam) {
       break;
     }
     for (std::map<Ngram, std::vector<Coverage> >::const_iterator ngramIt =
         ngrams.begin(); ngramIt != ngrams.end(); ++ngramIt) {
       for (int i = 0; i < ngramIt->second.size(); ++i) {
-        if ((*stateIt)->canApply(ngramIt->first, ngramIt->second[i])) {
-          extend(**stateIt, ngramIt->first, ngramIt->second[i]);
+        Ngram ngramToApply;
+        if (canApply(**stateIt, ngramIt->first, ngramIt->second[i],
+                     maxOverlap, &ngramToApply)) {
+          extend(**stateIt, ngramToApply, ngramIt->second[i]);
           // we break to use only the first coverage of the ngram to avoid
           // spurious ambiguity (and therefore to have better pruning: e.g. if
           // we keep 2 states in a column and the first two correspond to the
@@ -112,6 +111,79 @@ void Lattice::compactFst() {
 
 void Lattice::write(const string& filename) const {
   fst_->Write(filename);
+}
+
+bool Lattice::compatibleHistory(const State& state, const Ngram& ngram,
+                                const Coverage& overlap,
+                                const int overlapCount) const {
+  if (overlapCount == 0) {
+    return true;
+  }
+  // first check that the first words in the ngram correspond to the history
+  std::set<int> overlappingWords;
+  for (int i = 0; i < overlapCount; ++i) {
+    lm::WordIndex windex = index(ngram[i]);
+    if (windex != state.getKenlmState().words[overlapCount - 1 -i]) {
+      return false;
+    }
+    overlappingWords.insert(ngram[i]);
+  }
+  // then check that the first words in the ngram correspond to the input words
+  // corresponding to the overlap bits
+  int overlapSize = overlap.size();
+  for (int i = 0; i < overlapSize; ++i) {
+    if (overlap.test(i)) {
+      if (overlappingWords.find(inputWords_[overlapSize - i - 1]) ==
+          overlappingWords.end()) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool Lattice::canApply(const State& state, const Ngram& ngram,
+                       const Coverage& coverage, const int maxOverlap,
+                       Ngram* ngramToApply) const {
+  Coverage ol = state.coverage() & coverage;
+  int olcount = ol.count();
+  // olcount cannot be greater than the maximum overlap allowed (FLAGS_overlap)
+  // olcount cannot be greater than the size of the history
+  if (olcount > maxOverlap || olcount >= languageModel_->Order()) {
+    return false;
+  }
+  // ol cannot be included in the current coverage otherwise we don't extend
+  // anything. In the special case were ol is the empty set (for example in the
+  // initial state), we don't want coverage to be the empty set either.
+  if (ol == coverage) {
+    return false;
+  }
+  // Check that the history of this state is compatible with the ngram. True
+  // if the overlap is empty.
+  if (!compatibleHistory(state, ngram, ol, olcount)) {
+    return false;
+  }
+  // check that if the ngram starts with start-of-sentence, then the current
+  // state is initial (that is, has an empty coverage)
+  if (ngram[0] == STARTSENTENCE && !state.isInitial()) {
+    return false;
+  }
+  // checks that if the ngram ends with end-of-sentence, then the resulting
+  // coverage will cover all words
+  if (ngram[ngram.size() - 1] == ENDSENTENCE) {
+    int sizeNextCoverage =
+        state.coverage().count() + coverage.count() - olcount;
+    if (sizeNextCoverage < coverage.size()) {
+      return false;
+    }
+  }
+  // at this point, we can apply the ngram. We need to truncate it in case there
+  // is a non trivial overlap
+  *ngramToApply = ngram;
+  for (int i = 0; i < olcount; ++i) {
+    ngramToApply->erase(ngramToApply->begin());
+  }
+  return true;
 }
 
 void Lattice::extend(const State& state, const Ngram& ngram,
@@ -183,15 +255,10 @@ Cost Lattice::cost(const State& state, const Ngram& ngram,
   lm::ngram::State startKenlmStateTemp;
   const lm::ngram::Vocabulary& vocab = languageModel_->GetVocabulary();
   for (int i = 0; i < ngram.size(); i++) {
-    std::string word;
-    if (ngram[i] == 2) {
-      word = "</s>";
-    } else if (ngram[i] == 1) {
+    if (ngram[i] == STARTSENTENCE) {
       CHECK_EQ(0, i) << "Ngram with a start-of-sentence marker in the middle.";
       startKenlmStateTemp = languageModel_->BeginSentenceState();
       continue;
-    } else {
-      word = boost::lexical_cast<std::string>(ngram[i]);
     }
     if (i == 0) {
       startKenlmStateTemp = state.getKenlmState();
@@ -200,10 +267,21 @@ Cost Lattice::cost(const State& state, const Ngram& ngram,
     }
     // else startKenlmStateTemp has been set to
     // languageModel_->BeginSentenceState()
-    res += languageModel_->Score(startKenlmStateTemp, vocab.Index(word),
+    res += languageModel_->Score(startKenlmStateTemp, index(ngram[i]),
                                  *nextKenlmState);
   }
   return res;
+}
+
+const lm::WordIndex Lattice::index(int id) const {
+  const lm::ngram::Vocabulary& vocab = languageModel_->GetVocabulary();
+  if (id == ENDSENTENCE) {
+    return vocab.Index("</s>");
+  }
+  if (id == STARTSENTENCE) {
+    return vocab.Index("<s>");
+  }
+  return vocab.Index(boost::lexical_cast<std::string>(id));
 }
 
 } // namespace gen

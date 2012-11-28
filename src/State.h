@@ -41,16 +41,6 @@ public:
   ~State();
 
   /**
-   * Checks if an n-gram with a certain coverage can extend the current state.
-   * Conditions are coverage compatibility and start/end-of-sentence markers.
-   * @param ngram The n-gram extending the current state.
-   * @param coverage The coverage of the n-gram.
-   * @return True if the current state can be extended with the n-gram and
-   * coverage.
-   */
-  bool canApply(const Ngram& ngram, const Coverage& coverage) const;
-
-  /**
    * Checks if a state is initial, that is if the coverage has no bit set.
    * @return True if the coverage has no bit set, false otherwise.
    */
@@ -87,14 +77,6 @@ public:
   const lm::ngram::State& getKenlmState() const;
 
 private:
-  /**
-   * Computes the overlap between the coverage vector of this state and another
-   * coverage vector.
-   * @param ngram
-   * @return The overlap
-   */
-  int overlap(const Coverage& coverage) const;
-
   /** The state id in openfst. */
   StateId stateId_;
   /** A state key (pair coverage/history) that uniquely defines this state. */

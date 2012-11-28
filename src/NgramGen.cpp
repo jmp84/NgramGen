@@ -30,10 +30,11 @@ DEFINE_string(ngrams, "", "Name of a directory containing ngram and coverage "
 DEFINE_string(lm, "", "Language model file directory, in arpa or kenlm format.");
 DEFINE_string(fstoutput, "", "Directory name for the fst outputs.");
 DEFINE_string(range, "1", "Range of items to be processed");
-
-// pruning parameters
-DECLARE_int32(prune_nbest);
-DECLARE_double(prune_threshold);
+DEFINE_int32(overlap, 0, "Maximum overlap allowed when extending a state.");
+DEFINE_int32(prune_nbest, 0, "N-best pruning: number of states kept in a"
+             " column");
+DEFINE_double(prune_threshold, 0, "Threshold pruning: add this threshold to "
+              " the lowest cost in a column to define what states are kept.");
 
 namespace cam {
 namespace eng {
@@ -103,12 +104,12 @@ int main(int argc, char** argv) {
     std::ostringstream ngrams;
     ngrams << FLAGS_ngrams << "/"<< id << ".r";
     ngramLoader.loadNgram(ngrams.str());
-    Lattice lattice;
     std::ostringstream lm;
     lm << FLAGS_lm << "/" << id << "/lm.4.gz";
-    lattice.init(inputWords[id - 1], lm.str());
+    Lattice lattice(inputWords[id - 1], lm.str());
     for (int i = 0; i < inputWords[id - 1].size(); ++i) {
-      lattice.extend(ngramLoader, i);
+      lattice.extend(ngramLoader, i, FLAGS_prune_nbest, FLAGS_prune_threshold,
+                     FLAGS_overlap);
     }
     lattice.markFinalStates(inputWords[id - 1].size());
     lattice.compactFst();
