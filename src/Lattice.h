@@ -81,6 +81,12 @@ public:
   void compactFst();
 
   /**
+   * Applies pruning to the fst. This is done before writing the fst to disk.
+   * @param weight The prune weight (see fstprune --weight=)
+   */
+  void dumpPrune(const int weight);
+
+  /**
    * Write the output fst to a file.
    * @param filename The file name where to write the output fst.
    */

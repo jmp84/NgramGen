@@ -109,6 +109,11 @@ void Lattice::compactFst() {
   fst::Minimize(fst_.get());
 }
 
+void Lattice::dumpPrune(const int weight) {
+  fst::StdArc::Weight w = weight;
+  fst::Prune(&*fst_, w);
+}
+
 void Lattice::write(const string& filename) const {
   fst_->Write(filename);
 }

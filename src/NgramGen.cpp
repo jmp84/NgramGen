@@ -35,6 +35,8 @@ DEFINE_int32(prune_nbest, 0, "N-best pruning: number of states kept in a"
              " column");
 DEFINE_double(prune_threshold, 0, "Threshold pruning: add this threshold to "
               " the lowest cost in a column to define what states are kept.");
+DEFINE_int32(dump_prune, 0, "Pruning parameter for dumping lattices. If set to"
+    " a value greater than 0, then apply fstprune --weight= before writing.");
 
 namespace cam {
 namespace eng {
@@ -115,6 +117,9 @@ int main(int argc, char** argv) {
     lattice.compactFst();
     std::ostringstream output;
     output << FLAGS_fstoutput << "/" << id << ".fst";
+    if (FLAGS_dump_prune > 0) {
+      lattice.dumpPrune(FLAGS_dump_prune);
+    }
     lattice.write(output.str());
   }
 }
