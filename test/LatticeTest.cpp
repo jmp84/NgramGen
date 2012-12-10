@@ -9,7 +9,9 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "Column.h"
 #include "Lattice.h"
+#include "NgramLoader.h"
 #include "StateKey.h"
 #include "State.h"
 
@@ -22,7 +24,7 @@ protected:
   virtual void SetUp() {
     vector<int> input;
     input.push_back(7);
-    for (int i = 5; i <= 10; ++i) {
+    for (int i = 5; i <= 11; ++i) {
       input.push_back(i);
     }
     lattice_.reset(new Lattice(input, "test/lm.4.gz"));
@@ -48,9 +50,17 @@ protected:
   }
 
   bool canApply(const State& state, const Ngram& ngram,
-                const Coverage& coverage, Ngram* ngramToApply,
-                const int maxOverlap) const {
-    return lattice_->canApply(state, ngram, coverage, ngramToApply, maxOverlap);
+                const Coverage& coverage, const int maxOverlap,
+                Ngram* ngramToApply) const {
+    return lattice_->canApply(state, ngram, coverage, maxOverlap, ngramToApply);
+  }
+
+  const vector<int>& input() const {
+    return lattice_->inputWords_;
+  }
+
+  const int columnSize(const int index) const {
+    return lattice_->columns_[index].statesSortedByCost_.size();
   }
 
   boost::scoped_ptr<Lattice> lattice_;
@@ -92,7 +102,7 @@ TEST_F(LatticeTest, canApplyOverlapGreaterThanMaxOverlap) {
   ngram.push_back(8);
   Coverage ngramCoverage(std::string("0001100"));
   Ngram ngramToApply;
-  EXPECT_FALSE(canApply(*state_, ngram, ngramCoverage, &ngramToApply, 0));
+  EXPECT_FALSE(canApply(*state_, ngram, ngramCoverage, 0, &ngramToApply));
 }
 
 TEST_F(LatticeTest, canApplyOverlapGreaterThanHistory) {
@@ -103,7 +113,7 @@ TEST_F(LatticeTest, canApplyOverlapGreaterThanHistory) {
   }
   Coverage ngramCoverage(std::string("1111000"));
   Ngram ngramToApply;
-  EXPECT_FALSE(canApply(*state_, ngram, ngramCoverage, &ngramToApply, 0));
+  EXPECT_FALSE(canApply(*state_, ngram, ngramCoverage, 0, &ngramToApply));
 }
 
 TEST_F(LatticeTest, canApplyOverlapIncludedInStateCoverage) {
@@ -111,7 +121,7 @@ TEST_F(LatticeTest, canApplyOverlapIncludedInStateCoverage) {
   ngram.push_back(7);
   Coverage ngramCoverage(std::string("0001000"));
   Ngram ngramToApply;
-  EXPECT_FALSE(canApply(*state_, ngram, ngramCoverage, &ngramToApply, 0));
+  EXPECT_FALSE(canApply(*state_, ngram, ngramCoverage, 0, &ngramToApply));
 }
 
 TEST_F(LatticeTest, canApplyStartOfSentence) {
@@ -120,7 +130,7 @@ TEST_F(LatticeTest, canApplyStartOfSentence) {
   ngram.push_back(8);
   Coverage ngramCoverage(std::string("0000110"));
   Ngram ngramToApply;
-  EXPECT_FALSE(canApply(*state_, ngram, ngramCoverage, &ngramToApply, 0));
+  EXPECT_FALSE(canApply(*state_, ngram, ngramCoverage, 0, &ngramToApply));
 }
 
 TEST_F(LatticeTest, canApplyEndOfSentence) {
@@ -129,7 +139,7 @@ TEST_F(LatticeTest, canApplyEndOfSentence) {
   ngram.push_back(2);
   Coverage ngramCoverage(std::string("0000110"));
   Ngram ngramToApply;
-  EXPECT_FALSE(canApply(*state_, ngram, ngramCoverage, &ngramToApply, 0));
+  EXPECT_FALSE(canApply(*state_, ngram, ngramCoverage, 0, &ngramToApply));
 }
 
 TEST_F(LatticeTest, canApplyNgramToApply) {
@@ -138,9 +148,18 @@ TEST_F(LatticeTest, canApplyNgramToApply) {
   ngram.push_back(8);
   Coverage ngramCoverage(std::string("0001100"));
   Ngram ngramToApply;
-  EXPECT_TRUE(canApply(*state_, ngram, ngramCoverage, &ngramToApply, 1));
+  EXPECT_TRUE(canApply(*state_, ngram, ngramCoverage, 1, &ngramToApply));
   Ngram expectedNgram(1,8);
   EXPECT_EQ(expectedNgram, ngramToApply);
+}
+
+TEST_F(LatticeTest, removePrunedStates) {
+  NgramLoader ngramLoader;
+  ngramLoader.loadNgram("test/1.r");
+  for (int i = 0; i < input().size(); ++i) {
+    lattice_->extend(ngramLoader, i, 1, 0, 0);
+    EXPECT_LE(columnSize(i), 1);
+  }
 }
 
 } // namespace gen

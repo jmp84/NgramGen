@@ -11,7 +11,6 @@
 #include <boost/lexical_cast.hpp>
 #include <lm/state.hh>
 
-#include "Column.h"
 #include "NgramLoader.h"
 #include "State.h"
 #include "StateKey.h"
@@ -28,7 +27,7 @@ enum {
 };
 
 Lattice::Lattice(const std::vector<int>& words, const std::string& lmfile) :
-    fst_(new fst::StdVectorFst()), lattice_(words.size() + 1),
+    fst_(new fst::StdVectorFst()), columns_(words.size() + 1),
     languageModel_(new lm::ngram::Model(lmfile.c_str())), inputWords_(words) {
   Coverage emptyCoverage(words.size());
   // We initialize with a null context rather than a sentence begin context
@@ -39,8 +38,8 @@ Lattice::Lattice(const std::vector<int>& words, const std::string& lmfile) :
   StateId startId = fst_->AddState();
   fst_->SetStart(startId);
   State* initState = new State(startId, initStateKey, 0);
-  lattice_[0].statesIndexByStateKey_[*initStateKey] = initState;
-  lattice_[0].statesSortedByCost_.insert(initState);
+  columns_[0].statesIndexByStateKey_[*initStateKey] = initState;
+  columns_[0].statesSortedByCost_.insert(initState);
 }
 
 Lattice::~Lattice() {
@@ -50,25 +49,24 @@ Lattice::~Lattice() {
 void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex,
                      const int pruneNbest, const float pruneThreshold,
                      const int maxOverlap) {
-  CHECK_EQ(lattice_[columnIndex].statesIndexByStateKey_.size(),
-           lattice_[columnIndex].statesSortedByCost_.size()) <<
+  CHECK_EQ(columns_[columnIndex].statesIndexByStateKey_.size(),
+           columns_[columnIndex].statesSortedByCost_.size()) <<
                "Inconsistent number of states in column " << columnIndex;
   const std::map<Ngram, std::vector<Coverage> >& ngrams =
       ngramLoader.ngrams();
   std::set<State*, StatePointerComparator>::const_iterator stateIt =
-        lattice_[columnIndex].statesSortedByCost_.begin();
-  if (stateIt == lattice_[columnIndex].statesSortedByCost_.end()) {
+        columns_[columnIndex].statesSortedByCost_.begin();
+  if (stateIt == columns_[columnIndex].statesSortedByCost_.end()) {
     return;
   }
   int numStates = 0;
   Cost minCost = (*stateIt)->cost();
   Cost beam = minCost + pruneThreshold;
-  while (stateIt != lattice_[columnIndex].statesSortedByCost_.end()) {
+  while (stateIt != columns_[columnIndex].statesSortedByCost_.end()) {
     numStates++;
-    if (pruneNbest > 0 && numStates > pruneNbest) {
-      break;
-    }
-    if (pruneThreshold > 0 && (*stateIt)->cost() > beam) {
+    if ((pruneNbest > 0 && numStates > pruneNbest) ||
+        (pruneThreshold > 0 && (*stateIt)->cost() > beam)) {
+      removePrunedStates(stateIt, columnIndex);
       break;
     }
     for (std::map<Ngram, std::vector<Coverage> >::const_iterator ngramIt =
@@ -90,14 +88,22 @@ void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex,
   }
 }
 
+void Lattice::removePrunedStates(std::set<State*, StatePointerComparator>::const_iterator stateIt,
+                                 const int columnIndex) {
+  while (stateIt != columns_[columnIndex].statesSortedByCost_.end()) {
+    columns_[columnIndex].statesIndexByStateKey_.erase(*((*stateIt)->stateKey()));
+    columns_[columnIndex].statesSortedByCost_.erase(stateIt++);
+  }
+}
+
 void Lattice::markFinalStates(const int length) {
-  if (lattice_[length].empty()) {
+  if (columns_[length].empty()) {
     // Failure, there are no final states
     return;
   }
   for (std::set<State*, StatePointerComparator>::const_iterator it =
-      lattice_[length].statesSortedByCost_.begin();
-      it != lattice_[length].statesSortedByCost_.end(); ++it) {
+      columns_[length].statesSortedByCost_.begin();
+      it != columns_[length].statesSortedByCost_.end(); ++it) {
     fst_->SetFinal((*it)->stateId(), fst::StdArc::Weight::One());
   }
 }
@@ -202,8 +208,8 @@ void Lattice::extend(const State& state, const Ngram& ngram,
   delete nextKenlmState;
   State* newState;
   boost::unordered_map<StateKey, State*>::const_iterator findNewStateKey =
-      lattice_[columnIndex].statesIndexByStateKey_.find(*newStateKey);
-  if (findNewStateKey != lattice_[columnIndex].statesIndexByStateKey_.end()) {
+      columns_[columnIndex].statesIndexByStateKey_.find(*newStateKey);
+  if (findNewStateKey != columns_[columnIndex].statesIndexByStateKey_.end()) {
     // first case: the new coverage and history already exist
     Cost existingCost = findNewStateKey->second->cost();
     State* oldState = findNewStateKey->second;
@@ -212,9 +218,9 @@ void Lattice::extend(const State& state, const Ngram& ngram,
     // ordering is still correct.
     if (newCost < existingCost) {
       newState = new State(oldState->stateId(), newStateKey, newCost);
-      lattice_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
-      lattice_[columnIndex].statesSortedByCost_.erase(oldState);
-      lattice_[columnIndex].statesSortedByCost_.insert(newState);
+      columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
+      columns_[columnIndex].statesSortedByCost_.erase(oldState);
+      columns_[columnIndex].statesSortedByCost_.insert(newState);
       delete oldState;
     } else {
       delete newStateKey;
@@ -249,8 +255,8 @@ void Lattice::extend(const State& state, const Ngram& ngram,
       previousStateId = nextStateId;
     }
     newState = new State(nextStateId, newStateKey, newCost);
-    lattice_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
-    lattice_[columnIndex].statesSortedByCost_.insert(newState);
+    columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
+    columns_[columnIndex].statesSortedByCost_.insert(newState);
   }
 }
 

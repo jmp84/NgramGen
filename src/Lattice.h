@@ -13,6 +13,7 @@
 #include <fst/fstlib.h>
 #include <lm/model.hh>
 
+#include "Column.h"
 #include "Types.h"
 
 namespace lm {
@@ -36,8 +37,6 @@ class State;
  */
 class Lattice {
 public:
-  friend class LatticeTest;
-
   typedef fst::StdArc::StateId StateId;
 
   /**
@@ -132,6 +131,14 @@ private:
               const Coverage& coverage);
 
   /**
+   * Remove the states in a column from a certain point given by an iterator.
+   * @param stateIt The iterator pointing to the first state to be deleted.
+   * @param columnIndex The index of the column to prune.
+   */
+  void removePrunedStates(std::set<State*, StatePointerComparator>::const_iterator stateIt,
+                          const int columnIndex);
+
+  /**
    * Computes the cost of a state extended with an ngram.
    * @param state The state to be extended with an ngram.
    * @param ngram The ngram used to extend the state.
@@ -154,13 +161,15 @@ private:
 
   /** Lattice as a vector of columns. Indices indicate how many words have been
    * covered. */
-  std::vector<Column> lattice_;
+  std::vector<Column> columns_;
 
   /** Language model in KenLM format. */
   lm::ngram::Model* languageModel_;
 
   /** Input words to be reordered. */
   std::vector<int> inputWords_;
+
+  friend class LatticeTest;
 };
 
 } // namespace gen

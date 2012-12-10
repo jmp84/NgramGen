@@ -51,6 +51,7 @@ private:
   std::set<State*, StatePointerComparator> statesSortedByCost_;
 
   friend class Lattice;
+  friend class LatticeTest;
 };
 
 } // namespace gen
