@@ -75,15 +75,10 @@ public:
   void markFinalStates(const int length);
 
   /**
-   * Applies fst operations to get a compact fst.
+   * Applies fst operations to get a compact fst, including pruning.
+   * @param pruneWeight The pruning threshold.
    */
-  void compactFst();
-
-  /**
-   * Applies pruning to the fst. This is done before writing the fst to disk.
-   * @param weight The prune weight (see fstprune --weight=)
-   */
-  void dumpPrune(const int weight);
+  void compactFst(const int pruneWeight);
 
   /**
    * Write the output fst to a file.
@@ -128,7 +123,8 @@ private:
    * @param coverage The coverage of the n-gram.
    */
   void extend(const State& state, const std::vector<int>& ngram,
-              const Coverage& coverage);
+              const Coverage& coverage, const int pruneNbest,
+              const float pruneThreshold);
 
   /**
    * Remove the states in a column from a certain point given by an iterator.

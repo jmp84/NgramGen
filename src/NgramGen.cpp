@@ -114,13 +114,9 @@ int main(int argc, char** argv) {
                      FLAGS_overlap);
     }
     lattice.markFinalStates(inputWords[id - 1].size());
-    // TODO compact after pruning
-    lattice.compactFst();
     std::ostringstream output;
     output << FLAGS_fstoutput << "/" << id << ".fst";
-    if (FLAGS_dump_prune > 0) {
-      lattice.dumpPrune(FLAGS_dump_prune);
-    }
+    lattice.compactFst(FLAGS_dump_prune);
     lattice.write(output.str());
   }
 }
