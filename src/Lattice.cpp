@@ -90,14 +90,6 @@ void Lattice::extend(const NgramLoader& ngramLoader, const int columnIndex,
   }
 }
 
-void Lattice::removePrunedStates(std::set<State*, StatePointerComparator>::const_iterator stateIt,
-                                 const int columnIndex) {
-  while (stateIt != columns_[columnIndex].statesSortedByCost_.end()) {
-    columns_[columnIndex].statesIndexByStateKey_.erase(*((*stateIt)->stateKey()));
-    columns_[columnIndex].statesSortedByCost_.erase(stateIt++);
-  }
-}
-
 void Lattice::markFinalStates(const int length) {
   if (columns_[length].empty()) {
     // Failure, there are no final states
@@ -230,24 +222,10 @@ void Lattice::extend(const State& state, const Ngram& ngram,
       newState = oldState;
     }
     // Now add states and arc for the n-gram
-    StateId previousStateId = state.stateId();
-    StateId nextStateId;
-    fst::StdArc::Weight arcCost;
-    for (int i = 0; i < ngram.size(); ++i) {
-      if (i == ngram.size() - 1) {
-        nextStateId = newState->stateId();
-        arcCost = applyNgramCost;
-      } else {
-        nextStateId = fst_->AddState();
-        arcCost = fst::StdArc::Weight::One();
-      }
-      fst_->AddArc(previousStateId,
-                  fst::StdArc(ngram[i], ngram[i], arcCost, nextStateId));
-      previousStateId = nextStateId;
-    }
+    addFstStatesAndArcs(state, ngram, newState, applyNgramCost);
   } else {
     // second case: the new coverage and history don't already exist
-    ///*
+    // TODO refactor this bit
     if (pruneNbest > 0 && columnIndex != inputWords_.size() &&
         columns_[columnIndex].statesSortedByCost_.size() >= pruneNbest) {
       std::set<State*, StatePointerComparator>::const_iterator stateIt =
@@ -257,16 +235,8 @@ void Lattice::extend(const State& state, const Ngram& ngram,
       if (newCost >= maxCost) {
         return;
       }
-      StateId previousStateId = state.stateId();
-      StateId nextStateId;
-      fst::StdArc::Weight arcCost;
-      for (int i = 0; i < ngram.size(); ++i) {
-        arcCost = (i == ngram.size() - 1) ? applyNgramCost : fst::StdArc::Weight::One();
-        nextStateId = fst_->AddState();
-        fst_->AddArc(previousStateId,
-                     fst::StdArc(ngram[i], ngram[i], arcCost, nextStateId));
-        previousStateId = nextStateId;
-      }
+      StateId nextStateId =
+          addFstStatesAndArcsNewState(state, ngram, applyNgramCost);
       newState = new State(nextStateId, newStateKey, newCost);
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.insert(newState);
@@ -284,46 +254,16 @@ void Lattice::extend(const State& state, const Ngram& ngram,
       if (newCost > beam) {
         return;
       }
+      // TODO if newCost is the best cost, the beam changes and we need to
+      // remove states!!!
     } else {
-    //*/
-      StateId previousStateId = state.stateId();
-      StateId nextStateId;
-      fst::StdArc::Weight arcCost;
-      for (int i = 0; i < ngram.size(); ++i) {
-        arcCost = (i == ngram.size() - 1) ? applyNgramCost : fst::StdArc::Weight::One();
-        nextStateId = fst_->AddState();
-        fst_->AddArc(previousStateId,
-                     fst::StdArc(ngram[i], ngram[i], arcCost, nextStateId));
-        previousStateId = nextStateId;
-      }
+      StateId nextStateId =
+          addFstStatesAndArcsNewState(state, ngram, applyNgramCost);
       newState = new State(nextStateId, newStateKey, newCost);
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.insert(newState);
     }
   }
-  // prune column
-  /*
-  if ((pruneNbest > 0 || pruneThreshold > 0) &&
-      columnIndex != inputWords_.size()) {
-    std::set<State*, StatePointerComparator>::const_iterator stateIt =
-        columns_[columnIndex].statesSortedByCost_.begin();
-    CHECK(stateIt != columns_[columnIndex].statesSortedByCost_.end()) <<
-        "Column " << columnIndex <<
-        " cannot be empty, it resulted from an extension.";
-    int numStates = 0;
-    Cost minCost = (*stateIt)->cost();
-    Cost beam = minCost + pruneThreshold;
-    while (stateIt != columns_[columnIndex].statesSortedByCost_.end()) {
-      numStates++;
-      if ((pruneNbest > 0 && numStates > pruneNbest) ||
-          (pruneThreshold > 0 && (*stateIt)->cost() > beam)) {
-        removePrunedStates(stateIt, columnIndex);
-        break;
-      }
-      stateIt++;
-    }
-  }
-  //*/
 }
 
 Cost Lattice::cost(const State& state, const Ngram& ngram,
@@ -348,6 +288,41 @@ Cost Lattice::cost(const State& state, const Ngram& ngram,
                                  *nextKenlmState);
   }
   return res;
+}
+
+void Lattice::addFstStatesAndArcs(const State& state, const Ngram& ngram,
+                                  const State* newState,
+                                  const float applyNgramCost) {
+  StateId previousStateId = state.stateId();
+  StateId nextStateId;
+  fst::StdArc::Weight arcCost;
+  for (int i = 0; i < ngram.size(); ++i) {
+    if (i == ngram.size() - 1) {
+      nextStateId = newState->stateId();
+      arcCost = applyNgramCost;
+    } else {
+      nextStateId = fst_->AddState();
+      arcCost = fst::StdArc::Weight::One();
+    }
+    fst_->AddArc(previousStateId,
+                fst::StdArc(ngram[i], ngram[i], arcCost, nextStateId));
+    previousStateId = nextStateId;
+  }
+}
+
+Lattice::StateId Lattice::addFstStatesAndArcsNewState(
+    const State& state, const Ngram& ngram, const float applyNgramCost) {
+  StateId previousStateId = state.stateId();
+  StateId nextStateId;
+  fst::StdArc::Weight arcCost;
+  for (int i = 0; i < ngram.size(); ++i) {
+    arcCost = (i == ngram.size() - 1) ? applyNgramCost : fst::StdArc::Weight::One();
+    nextStateId = fst_->AddState();
+    fst_->AddArc(previousStateId,
+                 fst::StdArc(ngram[i], ngram[i], arcCost, nextStateId));
+    previousStateId = nextStateId;
+  }
+  return nextStateId;
 }
 
 const lm::WordIndex Lattice::index(int id) const {

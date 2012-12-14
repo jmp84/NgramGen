@@ -121,18 +121,12 @@ private:
    * @param state The state to be extended.
    * @param ngram The n-gram used to extend the state.
    * @param coverage The coverage of the n-gram.
+   * @param pruneNbest The maximum number of states in a column.
+   * @param pruneThreshold The beam threshold pruning parameter.
    */
   void extend(const State& state, const std::vector<int>& ngram,
               const Coverage& coverage, const int pruneNbest,
               const float pruneThreshold);
-
-  /**
-   * Remove the states in a column from a certain point given by an iterator.
-   * @param stateIt The iterator pointing to the first state to be deleted.
-   * @param columnIndex The index of the column to prune.
-   */
-  void removePrunedStates(std::set<State*, StatePointerComparator>::const_iterator stateIt,
-                          const int columnIndex);
 
   /**
    * Computes the cost of a state extended with an ngram.
@@ -143,6 +137,33 @@ private:
    */
   Cost cost(const State& state, const std::vector<int>& ngram,
             lm::ngram::State* nextKenlmState) const;
+
+  /**
+   * Adds states and arcs to the fst based on the start state, the end state,
+   * the n-gram begin applied and the cost of the n-gram. If the n-gram is
+   * greater than a unigram, then intermediate are added to the fst.
+   * @param state The start state.
+   * @param ngram The n-gram being applied.
+   * @param newState The end state.
+   * @param applyNgramCost The lm cost of applying the n-gram.
+   */
+  void addFstStatesAndArcs(
+      const State& state, const Ngram& ngram, const State* newState,
+      const float applyNgramCost);
+
+  /**
+   * Adds states and arcs to the fst based on the start state,
+   * the n-gram begin applied and the cost of the n-gram. If the n-gram is
+   * greater than a unigram, then intermediate are added to the fst. The state
+   * id for the last state added is returned in order to create a new Lattice
+   * state with that id.
+   * @param state The start state.
+   * @param ngram The n-gram being applied.
+   * @param applyNgramCost The lm cost of applying the n-gram.
+   * @return The state id of the last state created.
+   */
+  StateId addFstStatesAndArcsNewState(
+      const State& state, const Ngram& ngram, const float applyNgramCost);
 
   /**
    * Utility to compute the index in kenlm vocab from an integer id. This is a
