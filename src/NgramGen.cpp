@@ -37,6 +37,8 @@ DEFINE_double(prune_threshold, 0, "Threshold pruning: add this threshold to "
               " the lowest cost in a column to define what states are kept.");
 DEFINE_int32(dump_prune, 0, "Pruning parameter for dumping lattices. If set to"
     " a value greater than 0, then apply fstprune --weight= before writing.");
+DEFINE_bool(add_input, false, "If true, add the input sentence to the output "
+    "lattice, this ensures that we at least regenerate the input.");
 
 namespace cam {
 namespace eng {
@@ -114,9 +116,12 @@ int main(int argc, char** argv) {
                      FLAGS_overlap);
     }
     lattice.markFinalStates(inputWords[id - 1].size());
+    if (FLAGS_add_input) {
+      lattice.addInput();
+    }
+    lattice.compactFst(FLAGS_dump_prune);
     std::ostringstream output;
     output << FLAGS_fstoutput << "/" << id << ".fst";
-    lattice.compactFst(FLAGS_dump_prune);
     lattice.write(output.str());
   }
 }

@@ -75,6 +75,12 @@ public:
   void markFinalStates(const int length);
 
   /**
+   * Add input to the output fst to ensure that we are able to regenerate the
+   * input.
+   */
+  void addInput();
+
+  /**
    * Applies fst operations to get a compact fst, including pruning.
    * @param pruneWeight The pruning threshold.
    */

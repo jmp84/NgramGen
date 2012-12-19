@@ -102,6 +102,23 @@ void Lattice::markFinalStates(const int length) {
   }
 }
 
+void Lattice::addInput() {
+  State* startState = *(columns_[0].statesSortedByCost_.begin());
+  lm::ngram::State endKenlmState;
+  Cost costInput = cost(*startState, inputWords_, &endKenlmState) * (-log(10));
+  StateId id = fst_->Start();
+  StateId nextId;
+  fst::StdArc::Weight arcCost;
+  const lm::ngram::Vocabulary& vocab = languageModel_->GetVocabulary();
+  for (int i = 0; i < inputWords_.size(); ++i) {
+    arcCost = (i == inputWords_.size() - 1) ? costInput : fst::StdArc::Weight::One();
+    nextId = fst_->AddState();
+    fst_->AddArc(id, fst::StdArc(inputWords_[i], inputWords_[i], arcCost, nextId));
+    id = nextId;
+  }
+  fst_->SetFinal(nextId, fst::StdArc::Weight::One());
+}
+
 void Lattice::compactFst(const int pruneWeight) {
   fst::Connect(&(*fst_));
   if (pruneWeight > 0) {
