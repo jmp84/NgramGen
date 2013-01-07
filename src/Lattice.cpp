@@ -37,7 +37,7 @@ Lattice::Lattice(const std::vector<int>& words, const std::string& lmfile) :
   StateKey* initStateKey = new StateKey(emptyCoverage, initKenlmState);
   StateId startId = fst_->AddState();
   fst_->SetStart(startId);
-  State* initState = new State(startId, initStateKey, 0);
+  State* initState = new State(startId, initStateKey, 0, true);
   columns_[0].statesIndexByStateKey_[*initStateKey] = initState;
   columns_[0].statesSortedByCost_.insert(initState);
 }
@@ -135,6 +135,28 @@ void Lattice::write(const string& filename) const {
   fst_->Write(filename);
 }
 
+void Lattice::whenLostInput() const {
+  bool hasInput = false;
+  for (int columnIndex = columns_.size() - 1; columnIndex >= 0; --columnIndex) {
+    for (std::set<State*, StatePointerComparator>::const_iterator stateIt =
+        columns_[columnIndex].statesSortedByCost_.begin();
+        stateIt != columns_[columnIndex].statesSortedByCost_.end();
+        ++stateIt) {
+      if ((*stateIt)->hasInput()) {
+        hasInput = true;
+        break;
+      }
+    }
+    if (hasInput && columnIndex == columns_.size() - 1) {
+      return;
+    }
+    if (hasInput) {
+      LOG(INFO) << "Partial input was last seen in column " << columnIndex;
+      return;
+    }
+  }
+}
+
 bool Lattice::compatibleHistory(const State& state, const Ngram& ngram,
                                 const Coverage& overlap,
                                 const int overlapCount) const {
@@ -221,6 +243,9 @@ void Lattice::extend(const State& state, const Ngram& ngram,
   State* newState;
   boost::unordered_map<StateKey, State*>::const_iterator findNewStateKey =
       columns_[columnIndex].statesIndexByStateKey_.find(*newStateKey);
+  // check if the new state will contain a hypothesis corresponding to the
+  // partial input
+  bool hasInput = checkNextStateHasInput(state, columnIndex, ngram);
   if (findNewStateKey != columns_[columnIndex].statesIndexByStateKey_.end()) {
     // first case: the new coverage and history already exist
     Cost existingCost = findNewStateKey->second->cost();
@@ -229,7 +254,8 @@ void Lattice::extend(const State& state, const Ngram& ngram,
     // set containing states sorted by cost then reinsert a new state so the
     // ordering is still correct.
     if (newCost < existingCost) {
-      newState = new State(oldState->stateId(), newStateKey, newCost);
+      newState = new State(oldState->stateId(), newStateKey, newCost,
+                           hasInput || oldState->hasInput());
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.erase(oldState);
       columns_[columnIndex].statesSortedByCost_.insert(newState);
@@ -237,6 +263,9 @@ void Lattice::extend(const State& state, const Ngram& ngram,
     } else {
       delete newStateKey;
       newState = oldState;
+      if (hasInput) {
+        newState->setHasInput(hasInput);
+      }
     }
     // Now add states and arc for the n-gram
     addFstStatesAndArcs(state, ngram, newState, applyNgramCost);
@@ -254,7 +283,7 @@ void Lattice::extend(const State& state, const Ngram& ngram,
       }
       StateId nextStateId =
           addFstStatesAndArcsNewState(state, ngram, applyNgramCost);
-      newState = new State(nextStateId, newStateKey, newCost);
+      newState = new State(nextStateId, newStateKey, newCost, hasInput);
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.insert(newState);
       stateIt = columns_[columnIndex].statesSortedByCost_.end();
@@ -276,7 +305,7 @@ void Lattice::extend(const State& state, const Ngram& ngram,
     } else {
       StateId nextStateId =
           addFstStatesAndArcsNewState(state, ngram, applyNgramCost);
-      newState = new State(nextStateId, newStateKey, newCost);
+      newState = new State(nextStateId, newStateKey, newCost, hasInput);
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.insert(newState);
     }
@@ -351,6 +380,20 @@ const lm::WordIndex Lattice::index(int id) const {
     return vocab.Index("<s>");
   }
   return vocab.Index(boost::lexical_cast<std::string>(id));
+}
+
+const bool Lattice::checkNextStateHasInput(
+    const State& state, const int columnIndex, const Ngram& ngram) const {
+  if (!state.hasInput()) {
+    return false;
+  }
+  int previousColumnIndex = columnIndex - ngram.size();
+  for (int i = 0; i < ngram.size(); ++i) {
+    if (ngram[i] != inputWords_[previousColumnIndex + i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 } // namespace gen

@@ -92,6 +92,11 @@ public:
    */
   void write(const string& filename) const;
 
+  /**
+   * Finds the column where the input was last seen and prints a log message.
+   */
+  void whenLostInput() const;
+
 private:
   /**
    * In case of overlap, checks if the history of a state is compatible with an
@@ -178,6 +183,17 @@ private:
    * @return The index in kenlm vocab.
    */
   const lm::WordIndex index(int id) const;
+
+  /**
+   * Checks if the state obtained by extension will contain a hypothesis
+   * corresponding to the partial input.
+   * @param state The next state.
+   * @param columnIndex The column index for the next state.
+   * @param ngram The n-gram applied to the previous state.
+   * @return
+   */
+  const bool checkNextStateHasInput(
+      const State& state, const int columnIndex, const Ngram& ngram) const;
 
   /** The fst encoding the hypotheses. */
   boost::scoped_ptr<fst::StdVectorFst> fst_;

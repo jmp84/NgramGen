@@ -39,6 +39,8 @@ DEFINE_int32(dump_prune, 0, "Pruning parameter for dumping lattices. If set to"
     " a value greater than 0, then apply fstprune --weight= before writing.");
 DEFINE_bool(add_input, false, "If true, add the input sentence to the output "
     "lattice, this ensures that we at least regenerate the input.");
+DEFINE_bool(when_lost_input, false, "If true, looks for when the input was lost"
+    " as a hypothesis");
 
 namespace cam {
 namespace eng {
@@ -118,6 +120,9 @@ int main(int argc, char** argv) {
     lattice.markFinalStates(inputWords[id - 1].size());
     if (FLAGS_add_input) {
       lattice.addInput();
+    }
+    if (FLAGS_when_lost_input) {
+      lattice.whenLostInput();
     }
     lattice.compactFst(FLAGS_dump_prune);
     std::ostringstream output;

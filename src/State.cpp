@@ -16,8 +16,9 @@ namespace cam {
 namespace eng {
 namespace gen {
 
-State::State(StateId stateId, StateKey* stateKey, const Cost cost)
-  : stateId_(stateId), stateKey_(stateKey), cost_(cost) {}
+State::State(const StateId stateId, StateKey* stateKey, const Cost cost,
+             bool hasInput)
+  : stateId_(stateId), stateKey_(stateKey), cost_(cost), hasInput_(hasInput) {}
 
 State::~State() {
   delete stateKey_;
@@ -45,6 +46,14 @@ const StateKey* State::stateKey() const {
 
 const lm::ngram::State& State::getKenlmState() const {
   return stateKey_->kenlmState_;
+}
+
+const bool State::hasInput() const {
+  return hasInput_;
+}
+
+void State::setHasInput(bool hasInput) {
+  hasInput_ = hasInput;
 }
 
 } // namespace gen

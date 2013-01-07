@@ -33,7 +33,8 @@ public:
    * @param key The key that uniquely defines the state.
    * @param cost The cost.
    */
-  State(StateId stateId, StateKey* key, const Cost cost);
+  State(const StateId stateId, StateKey* key, const Cost cost,
+        const bool hasInput);
 
   /**
    * Destructor. Custom destructor to delete the state key pointer.
@@ -76,6 +77,18 @@ public:
    */
   const lm::ngram::State& getKenlmState() const;
 
+  /**
+   * Getter.
+   * @return True if the partial input has been regenerated.
+   */
+  const bool hasInput() const;
+
+  /**
+   * Setter.
+   * @param hasInput True if the partial input has been regenerated.
+   */
+  void setHasInput(bool hasInput);
+
 private:
   /** The state id in openfst. */
   StateId stateId_;
@@ -83,6 +96,8 @@ private:
   StateKey* stateKey_;
   /** The best cost so far, or shortest distance from the initial state. */
   Cost cost_;
+  /** Indicates if the partial input has been regenerated. */
+  bool hasInput_;
 };
 
 } // namespace gen
