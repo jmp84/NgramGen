@@ -13,6 +13,7 @@
 #include <fst/fstlib.h>
 #include <lm/model.hh>
 
+#include "features/Weights.h"
 #include "Column.h"
 #include "Types.h"
 
@@ -45,7 +46,8 @@ public:
    * @param words The input words to be reordered.
    * @param lmfile The language model file (in arpa or kenlm format).
    */
-  Lattice(const std::vector<int>& words, const std::string& lmfile);
+  Lattice(const std::vector<int>& words, const std::string& lmfile,
+          const std::vector<std::string>& featureNames, const Weights& weights);
 
   /**
    * Destructor. Custom destructor because one field is a pointer.
@@ -142,12 +144,25 @@ private:
   /**
    * Computes the cost of a state extended with an ngram.
    * @param state The state to be extended with an ngram.
-   * @param ngram The ngram used to extend the state.
+   * @param rule The ngram used to extend the state.
    * @param nextKenlmState The kenlm state we end up in.
-   * @return The cost which the original cost + the cost of the n-gram.
+   * @return The cost which is the scalar product of the feature weights and
+   * the feature values of the rule.
    */
-  Cost cost(const State& state, const std::vector<int>& ngram,
+  Cost cost(const State& state, const Ngram& rule,
             lm::ngram::State* nextKenlmState) const;
+
+  /**
+   * Computes the language model cost of a rule starting in a certain state
+   * (with a certain history).
+   * @param state The start we start from.
+   * @param rule The rule we apply.
+   * @param nextKenlmState The kenlm state we end up in.
+   * @return
+   */
+  Cost lmCost(const State& state, const Ngram& rule,
+              lm::ngram::State* nextKenlmState) const;
+
 
   /**
    * Adds states and arcs to the fst based on the start state, the end state,
@@ -207,6 +222,12 @@ private:
 
   /** Input words to be reordered. */
   std::vector<int> inputWords_;
+
+  /** List of feature names. */
+  std::vector<std::string> featureNames_;
+
+  /** List of weights. */
+  Weights weights_;
 
   friend class LatticeTest;
 };

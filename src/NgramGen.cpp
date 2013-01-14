@@ -16,6 +16,7 @@
 #include <glog/logging.h>
 #include <fst/fstlib.h>
 
+#include "features/Weights.h"
 #include "Column.h"
 #include "Lattice.h"
 #include "NgramLoader.h"
@@ -41,6 +42,9 @@ DEFINE_bool(add_input, false, "If true, add the input sentence to the output "
     "lattice, this ensures that we at least regenerate the input.");
 DEFINE_bool(when_lost_input, false, "If true, looks for when the input was lost"
     " as a hypothesis");
+DEFINE_string(features, "", "Comma separated list of features");
+DEFINE_string(weights, "", "Comma separated list of feature weights. "
+    "The format is featureName1=weight1,featureName2=weight2 etc.");
 
 namespace cam {
 namespace eng {
@@ -65,6 +69,52 @@ void parseInput(const std::string& fileName,
     std::transform(stringWords.begin(), stringWords.end(), sequence.begin(),
                  boost::lexical_cast<int, std::string>);
     words->push_back(sequence);
+  }
+}
+
+/**
+ * Parses comma separated feature names into a vector of feature names.
+ * @param featureNames The comma separated feature names.
+ * @param features The output list of feature names.
+ */
+void parseFeatures(const std::string& featureNames,
+                   std::vector<std::string>* features) {
+  // boost split for empty strings returns a vector of size 1 so we need to take
+  // care of that case
+  if (featureNames.empty()) {
+    features->clear();
+  }
+  else {
+    boost::split(*features, featureNames, boost::is_any_of(","));
+  }
+}
+
+/**
+ * Parses a comma separated list of pair featureName=featureWeight into a
+ * Weight object. The format is featureName1=weight1,featureName2=weight2 etc."
+ * @param featureWeights The comma separated list of featureName=featureWeight
+ * pairs
+ * @param weights The output Weight object.
+ */
+void parseWeights(const std::string& featureWeights, Weights* weights) {
+  if (featureWeights.empty()) {
+    weights->clear();
+    return;
+  }
+  std::vector<std::string> listPairFeatureNameFeatureWeight;
+  boost::split(
+      listPairFeatureNameFeatureWeight, featureWeights, boost::is_any_of(","));
+  for (int i = 0; i < listPairFeatureNameFeatureWeight.size(); ++i) {
+    std::vector<std::string> pairFeatureNameFeatureWeight;
+    boost::split(pairFeatureNameFeatureWeight,
+                 listPairFeatureNameFeatureWeight[i], boost::is_any_of("="));
+    CHECK_EQ(2, pairFeatureNameFeatureWeight.size()) <<
+        "Malformed feature weight pair: " <<
+        listPairFeatureNameFeatureWeight[i] <<
+        " in feature weight string: " << featureWeights;
+    weights->addWeight(
+        pairFeatureNameFeatureWeight[0],
+        boost::lexical_cast<float>(pairFeatureNameFeatureWeight[1]));
   }
 }
 
@@ -101,6 +151,10 @@ int main(int argc, char** argv) {
   checkArgs(argc, argv);
   std::vector<std::vector<int> > inputWords;
   parseInput(FLAGS_sentenceFile, &inputWords);
+  std::vector<std::string> features;
+  parseFeatures(FLAGS_features, &features);
+  Weights weights;
+  parseWeights(FLAGS_weights, &weights);
   for (boost::scoped_ptr<IntegerRangeInterface> ir(
       IntegerRangeInterface::initFactory(FLAGS_range));
       !ir->done(); ir->next()) {
@@ -112,7 +166,7 @@ int main(int argc, char** argv) {
     ngramLoader.loadNgram(ngrams.str());
     std::ostringstream lm;
     lm << FLAGS_lm << "/" << id << "/lm.4.gz";
-    Lattice lattice(inputWords[id - 1], lm.str());
+    Lattice lattice(inputWords[id - 1], lm.str(), features, weights);
     for (int i = 0; i < inputWords[id - 1].size(); ++i) {
       lattice.extend(ngramLoader, i, FLAGS_prune_nbest, FLAGS_prune_threshold,
                      FLAGS_overlap);

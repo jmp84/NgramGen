@@ -11,6 +11,7 @@
 #include <boost/lexical_cast.hpp>
 #include <lm/state.hh>
 
+#include "features/RuleCostComputer.h"
 #include "NgramLoader.h"
 #include "State.h"
 #include "StateKey.h"
@@ -26,9 +27,12 @@ enum {
   ENDSENTENCE = 2
 };
 
-Lattice::Lattice(const std::vector<int>& words, const std::string& lmfile) :
+Lattice::Lattice(const std::vector<int>& words, const std::string& lmfile,
+                 const std::vector<std::string>& featureNames,
+                 const Weights& weights) :
     fst_(new fst::StdVectorFst()), columns_(words.size() + 1),
-    languageModel_(new lm::ngram::Model(lmfile.c_str())), inputWords_(words) {
+    languageModel_(new lm::ngram::Model(lmfile.c_str())), inputWords_(words),
+    featureNames_(featureNames), weights_(weights) {
   Coverage emptyCoverage(words.size());
   // We initialize with a null context rather than a sentence begin context
   // because if we chop an input sentence, then the first word might not be a
@@ -236,7 +240,7 @@ void Lattice::extend(const State& state, const Ngram& ngram,
   Coverage newCoverage = state.coverage() | coverage;
   int columnIndex = newCoverage.count();
   lm::ngram::State* nextKenlmState = new lm::ngram::State();
-  Cost applyNgramCost = cost(state, ngram, nextKenlmState) * (-log(10));
+  Cost applyNgramCost = cost(state, ngram, nextKenlmState);
   Cost newCost = state.cost() + applyNgramCost;
   StateKey* newStateKey = new StateKey(newCoverage, *nextKenlmState);
   delete nextKenlmState;
@@ -312,28 +316,37 @@ void Lattice::extend(const State& state, const Ngram& ngram,
   }
 }
 
-Cost Lattice::cost(const State& state, const Ngram& ngram,
+Cost Lattice::cost(const State& state, const Ngram& rule,
                    lm::ngram::State* nextKenlmState) const {
+  Cost res = 0;
+  Cost lmc = lmCost(state, rule, nextKenlmState);
+  Cost rc = ruleCost(rule, weights_, featureNames_);
+  res += weights_.getWeight("lm") * lmc + rc;
+  return res;
+}
+
+Cost Lattice::lmCost(const State& state, const Ngram& rule,
+                     lm::ngram::State* nextKenlmState) const {
   Cost res = 0;
   lm::ngram::State startKenlmStateTemp;
   const lm::ngram::Vocabulary& vocab = languageModel_->GetVocabulary();
-  for (int i = 0; i < ngram.size(); i++) {
-    if (ngram[i] == STARTSENTENCE) {
+  for (int i = 0; i < rule.size(); i++) {
+    if (rule[i] == STARTSENTENCE) {
       CHECK_EQ(0, i) << "Ngram with a start-of-sentence marker in the middle.";
       startKenlmStateTemp = languageModel_->BeginSentenceState();
       continue;
     }
     if (i == 0) {
       startKenlmStateTemp = state.getKenlmState();
-    } else if (i > 1 || ngram[0] != 1) {
+    } else if (i > 1 || rule[0] != 1) {
       startKenlmStateTemp = *nextKenlmState;
     }
     // else startKenlmStateTemp has been set to
     // languageModel_->BeginSentenceState()
-    res += languageModel_->Score(startKenlmStateTemp, index(ngram[i]),
+    res += languageModel_->Score(startKenlmStateTemp, index(rule[i]),
                                  *nextKenlmState);
   }
-  return res;
+  return res * (-log(10));
 }
 
 void Lattice::addFstStatesAndArcs(const State& state, const Ngram& ngram,
