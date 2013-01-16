@@ -36,15 +36,19 @@ DEFINE_int32(prune_nbest, 0, "N-best pruning: number of states kept in a"
              " column");
 DEFINE_double(prune_threshold, 0, "Threshold pruning: add this threshold to "
               " the lowest cost in a column to define what states are kept.");
-DEFINE_int32(dump_prune, 0, "Pruning parameter for dumping lattices. If set to"
-    " a value greater than 0, then apply fstprune --weight= before writing.");
+DEFINE_double(dump_prune, 0, "Pruning parameter for dumping lattices. If set to"
+              " a value greater than 0, then apply fstprune --weight= before"
+              " writing.");
 DEFINE_bool(add_input, false, "If true, add the input sentence to the output "
-    "lattice, this ensures that we at least regenerate the input.");
+            "lattice, this ensures that we at least regenerate the input.");
 DEFINE_bool(when_lost_input, false, "If true, looks for when the input was lost"
-    " as a hypothesis");
+            " as a hypothesis");
 DEFINE_string(features, "", "Comma separated list of features");
 DEFINE_string(weights, "", "Comma separated list of feature weights. "
-    "The format is featureName1=weight1,featureName2=weight2 etc.");
+              "The format is featureName1=weight1,featureName2=weight2 etc.");
+DEFINE_string(task, "decode", "Task: either 'decode' or 'tune'. If the task is "
+              "decode, the output is a StdVectorFst. If the task is tune, then "
+              "the output is a fst with sparse weights.");
 
 namespace cam {
 namespace eng {
@@ -136,6 +140,28 @@ void checkArgs(int argc, char** argv) {
         (FLAGS_prune_nbest != 0 && FLAGS_prune_threshold == 0) ||
         (FLAGS_prune_nbest == 0 && FLAGS_prune_threshold != 0)) << "Only one "
             "threshold strategy is allowed: --prune_nbest or --prune_threshold";
+  CHECK(FLAGS_task == "decode" || FLAGS_task == "tune") << "Unknown task: " <<
+      FLAGS_task << ". The task can only be 'decode' or 'tune'";
+}
+
+template <class Arc>
+void decode(const vector<int>& inputWords, const int id,
+            const NgramLoader& ngramLoader, Lattice<Arc>* lattice) {
+  for (int i = 0; i < inputWords.size(); ++i) {
+    lattice->extend(ngramLoader, i, FLAGS_prune_nbest, FLAGS_prune_threshold,
+                    FLAGS_overlap);
+  }
+  lattice->markFinalStates(inputWords.size());
+  if (FLAGS_add_input) {
+    lattice->addInput();
+  }
+  if (FLAGS_when_lost_input) {
+    lattice->whenLostInput();
+  }
+  lattice->compactFst(FLAGS_dump_prune);
+  std::ostringstream output;
+  output << FLAGS_fstoutput << "/" << id << ".fst";
+  lattice->write(output.str());
 }
 
 } // namespace gen
@@ -166,21 +192,12 @@ int main(int argc, char** argv) {
     ngramLoader.loadNgram(ngrams.str());
     std::ostringstream lm;
     lm << FLAGS_lm << "/" << id << "/lm.4.gz";
-    Lattice lattice(inputWords[id - 1], lm.str(), features, weights);
-    for (int i = 0; i < inputWords[id - 1].size(); ++i) {
-      lattice.extend(ngramLoader, i, FLAGS_prune_nbest, FLAGS_prune_threshold,
-                     FLAGS_overlap);
+    if (FLAGS_task == "decode") {
+      decode(inputWords[id - 1], id, ngramLoader,
+             new Lattice<fst::StdArc>(
+                 inputWords[id - 1], lm.str(), features, weights));
+    } else if (FLAGS_task == "tune") {
+      LOG(FATAL) << "Task " << FLAGS_task << " not implemented yet!";
     }
-    lattice.markFinalStates(inputWords[id - 1].size());
-    if (FLAGS_add_input) {
-      lattice.addInput();
-    }
-    if (FLAGS_when_lost_input) {
-      lattice.whenLostInput();
-    }
-    lattice.compactFst(FLAGS_dump_prune);
-    std::ostringstream output;
-    output << FLAGS_fstoutput << "/" << id << ".fst";
-    lattice.write(output.str());
   }
 }

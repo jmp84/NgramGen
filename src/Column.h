@@ -50,7 +50,7 @@ private:
   /** States sorted by their cost.*/
   std::set<State*, StatePointerComparator> statesSortedByCost_;
 
-  friend class Lattice;
+  template <class Arc> friend class Lattice;
   friend class LatticeTest;
 };
 
