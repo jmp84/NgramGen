@@ -6,8 +6,8 @@
  */
 
 #include <glog/logging.h>
-#include "FeatureFactory.h"
-#include "FeatureCreator.h"
+#include "features/FeatureFactory.h"
+#include "features/FeatureCreator.h"
 
 namespace cam {
 namespace eng {

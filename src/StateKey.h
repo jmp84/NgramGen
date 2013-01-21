@@ -8,7 +8,7 @@
 #ifndef STATEKEY_H_
 #define STATEKEY_H_
 
-#include "lm/state.hh"
+#include <lm/state.hh>
 
 #include "Types.h"
 

@@ -5,7 +5,7 @@
  *      Author: jmp84
  */
 
-#include "DummyFeature.h"
+#include "features/DummyFeature.h"
 
 namespace cam {
 namespace eng {

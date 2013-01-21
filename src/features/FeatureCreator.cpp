@@ -5,8 +5,8 @@
  *      Author: jmp84
  */
 
-#include "FeatureCreator.h"
-#include "FeatureFactory.h"
+#include "features/FeatureCreator.h"
+#include "features/FeatureFactory.h"
 
 namespace cam {
 namespace eng {

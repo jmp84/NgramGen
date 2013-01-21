@@ -5,24 +5,41 @@
  *      Author: jmp84
  */
 
-#include "RuleCostComputer.h"
-#include "Feature.h"
-#include "FeatureFactory.h"
-#include "Weights.h"
+#include "features/RuleCostComputer.h"
+
+#include <glog/logging.h>
+
+#include "Util.h"
+#include "State.h"
 
 namespace cam {
 namespace eng {
 namespace gen {
 
-const float ruleCost(const Ngram& rule, const Weights& weights,
-                     const std::vector<std::string>& featureNames) {
-  float res = 0;
-  for (int i = 0; i < featureNames.size(); ++i) {
-    boost::shared_ptr<Feature> feature =
-        FeatureFactory::createFeature(featureNames[i]);
-    res += feature->getValue(rule) * weights.getWeight(featureNames[i]);
+Cost lmCost(const State& state, const Ngram& rule,
+            lm::ngram::Model* languageModel,
+            lm::ngram::State* nextKenlmState) {
+  Cost res = 0;
+  lm::ngram::State startKenlmStateTemp;
+  const lm::ngram::Vocabulary& vocab = languageModel->GetVocabulary();
+  for (int i = 0; i < rule.size(); i++) {
+    if (rule[i] == STARTSENTENCE) {
+      CHECK_EQ(0, i) << "Ngram with a start-of-sentence marker in the middle.";
+      startKenlmStateTemp = languageModel->BeginSentenceState();
+      continue;
+    }
+    if (i == 0) {
+      startKenlmStateTemp = state.getKenlmState();
+    } else if (i > 1 || rule[0] != 1) {
+      startKenlmStateTemp = *nextKenlmState;
+    }
+    // else startKenlmStateTemp has been set to
+    // languageModel_->BeginSentenceState()
+    res += languageModel->Score(
+        startKenlmStateTemp, index(languageModel->GetVocabulary(), rule[i]),
+        *nextKenlmState);
   }
-  return res;
+  return res * (-log(10));
 }
 
 } // namespace gen

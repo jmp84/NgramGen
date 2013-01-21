@@ -5,7 +5,7 @@
  *      Author: jmp84
  */
 
-#include "Weights.h"
+#include "features/Weights.h"
 #include <glog/logging.h>
 
 namespace cam {

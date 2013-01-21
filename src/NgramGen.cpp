@@ -16,8 +16,8 @@
 #include <glog/logging.h>
 #include <fst/fstlib.h>
 
-#include "features/Weights.h"
 #include "Column.h"
+#include "features/Weights.h"
 #include "Lattice.h"
 #include "NgramLoader.h"
 #include "Range.h"
@@ -181,6 +181,13 @@ int main(int argc, char** argv) {
   parseFeatures(FLAGS_features, &features);
   Weights weights;
   parseWeights(FLAGS_weights, &weights);
+  // +1 is for the language model.
+  std::vector<float> weightsForParams(features.size() + 1);
+  weightsForParams[0] = 1;
+  for (int i = 0; i < features.size(); ++i) {
+    weightsForParams[i + 1] = weights.getWeight(features[i]);
+  }
+  fst::TropicalSparseTupleWeight<float>::Params() = weightsForParams;
   for (boost::scoped_ptr<IntegerRangeInterface> ir(
       IntegerRangeInterface::initFactory(FLAGS_range));
       !ir->done(); ir->next()) {
@@ -197,7 +204,9 @@ int main(int argc, char** argv) {
              new Lattice<fst::StdArc>(
                  inputWords[id - 1], lm.str(), features, weights));
     } else if (FLAGS_task == "tune") {
-      LOG(FATAL) << "Task " << FLAGS_task << " not implemented yet!";
+      decode(inputWords[id - 1], id, ngramLoader,
+             new Lattice<TupleArc32>(
+                 inputWords[id - 1], lm.str(), features, weights));
     }
   }
 }

@@ -8,7 +8,7 @@
 #ifndef FEATURE_H_
 #define FEATURE_H_
 
-#include "../Types.h"
+#include "Types.h"
 
 namespace cam {
 namespace eng {

@@ -14,13 +14,14 @@
 #include <lm/model.hh>
 #include <lm/state.hh>
 
+#include "Column.h"
 #include "features/RuleCostComputer.h"
 #include "features/Weights.h"
-#include "Column.h"
 #include "NgramLoader.h"
 #include "State.h"
 #include "StateKey.h"
 #include "Types.h"
+#include "Util.h"
 
 namespace cam {
 namespace eng {
@@ -139,39 +140,20 @@ private:
               const float pruneThreshold);
 
   /**
-   * Computes the cost of a state extended with an ngram.
-   * @param state The state to be extended with an ngram.
-   * @param rule The ngram used to extend the state.
-   * @param nextKenlmState The kenlm state we end up in.
-   * @return The cost which is the scalar product of the feature weights and
-   * the feature values of the rule.
-   */
-  Cost cost(const State& state, const Ngram& rule,
-            lm::ngram::State* nextKenlmState) const;
-
-  /**
-   * Computes the language model cost of a rule starting in a certain state
-   * (with a certain history).
-   * @param state The start we start from.
-   * @param rule The rule we apply.
-   * @param nextKenlmState The kenlm state we end up in.
-   * @return
-   */
-  Cost lmCost(const State& state, const Ngram& rule,
-              lm::ngram::State* nextKenlmState) const;
-
-  /**
    * Adds states and arcs to the fst based on the start state, the end state,
    * the n-gram begin applied and the cost of the n-gram. If the n-gram is
    * greater than a unigram, then intermediate are added to the fst.
    * @param state The start state.
    * @param ngram The n-gram being applied.
    * @param newState The end state.
-   * @param applyNgramCost The lm cost of applying the n-gram.
+   * @param weight The weight to put on one of the arcs. In decoding, this
+   * weight is the cost of the ngram (dot product feature values/feature
+   * weights). In tuning, the weight represents the feature values and the
+   * feature weights.
    */
   void addFstStatesAndArcs(
       const State& state, const Ngram& ngram, const State* newState,
-      const float applyNgramCost);
+      const Weight& weight);
 
   /**
    * Adds states and arcs to the fst based on the start state,
@@ -181,19 +163,14 @@ private:
    * state with that id.
    * @param state The start state.
    * @param ngram The n-gram being applied.
-   * @param applyNgramCost The lm cost of applying the n-gram.
+   * @param weight The weight to put on one of the arcs. In decoding, this
+   * weight is the cost of the ngram (dot product feature values/feature
+   * weights). In tuning, the weight represents the feature values and the
+   * feature weights.
    * @return The state id of the last state created.
    */
   StateId addFstStatesAndArcsNewState(
-      const State& state, const Ngram& ngram, const float applyNgramCost);
-
-  /**
-   * Utility to compute the index in kenlm vocab from an integer id. This is a
-   * bit inefficient. It should be possible to reuse the id directly.
-   * @param id
-   * @return The index in kenlm vocab.
-   */
-  const lm::WordIndex index(int id) const;
+      const State& state, const Ngram& ngram, const Weight& weight);
 
   /**
    * Checks if the state obtained by extension will contain a hypothesis
@@ -226,12 +203,6 @@ private:
   Weights weights_;
 
   friend class LatticeTest;
-};
-
-// start and end-of-sentence symbols
-enum {
-  STARTSENTENCE = 1,
-  ENDSENTENCE = 2
 };
 
 template <class Arc>
@@ -319,17 +290,21 @@ void Lattice<Arc>::markFinalStates(const int length) {
 
 template <class Arc>
 void Lattice<Arc>::addInput() {
-  State* startState = *(columns_[0].statesSortedByCost_.begin());
   lm::ngram::State endKenlmState;
-  Cost costInput = cost(*startState, inputWords_, &endKenlmState);
+  RuleCostAndWeightComputer<Arc> c;
+  Weight inputWeight;
+  c(**(columns_[0].statesSortedByCost_.begin()), inputWords_, weights_,
+    featureNames_, languageModel_, &endKenlmState, &inputWeight);
   StateId id = fst_->Start();
   StateId nextId;
-  Weight arcCost;
-  const lm::ngram::Vocabulary& vocab = languageModel_->GetVocabulary();
   for (int i = 0; i < inputWords_.size(); ++i) {
-    arcCost = (i == inputWords_.size() - 1) ? costInput : Weight::One();
     nextId = fst_->AddState();
-    fst_->AddArc(id, Arc(inputWords_[i], inputWords_[i], arcCost, nextId));
+    if (i == inputWords_.size() - 1) {
+      fst_->AddArc(id, Arc(inputWords_[i], inputWords_[i], inputWeight, nextId));
+    } else {
+      fst_->AddArc(
+          id, Arc(inputWords_[i], inputWords_[i], Weight::One(), nextId));
+    }
     id = nextId;
   }
   fst_->SetFinal(nextId, Weight::One());
@@ -339,9 +314,11 @@ template <class Arc>
 void Lattice<Arc>::compactFst(const float pruneWeight) {
   fst::Connect(&(*fst_));
   if (pruneWeight > 0) {
-    Weight w = pruneWeight;
+    MakeWeight<Arc> makeWeight;
+    Weight w = makeWeight(pruneWeight);
     fst::Prune(&*fst_, w);
   }
+
   fst::VectorFst<Arc>* tempfst = new fst::VectorFst<Arc>();
   fst::Determinize(*fst_, tempfst);
   fst_.reset(tempfst);
@@ -386,7 +363,7 @@ bool Lattice<Arc>::compatibleHistory(const State& state, const Ngram& ngram,
   // first check that the first words in the ngram correspond to the history
   std::set<int> overlappingWords;
   for (int i = 0; i < overlapCount; ++i) {
-    lm::WordIndex windex = index(ngram[i]);
+    lm::WordIndex windex = index(languageModel_->GetVocabulary(), ngram[i]);
     if (windex != state.getKenlmState().words[overlapCount - 1 -i]) {
       return false;
     }
@@ -458,7 +435,11 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
   Coverage newCoverage = state.coverage() | coverage;
   int columnIndex = newCoverage.count();
   lm::ngram::State* nextKenlmState = new lm::ngram::State();
-  Cost applyNgramCost = cost(state, ngram, nextKenlmState);
+  Weight arcWeight;
+  RuleCostAndWeightComputer<Arc> ruleCostAndWeightComputer;
+  Cost applyNgramCost = ruleCostAndWeightComputer(
+      state, ngram, weights_, featureNames_, languageModel_,
+      nextKenlmState, &arcWeight);
   Cost newCost = state.cost() + applyNgramCost;
   StateKey* newStateKey = new StateKey(newCoverage, *nextKenlmState);
   delete nextKenlmState;
@@ -490,7 +471,7 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
       }
     }
     // Now add states and arc for the n-gram
-    addFstStatesAndArcs(state, ngram, newState, applyNgramCost);
+    addFstStatesAndArcs(state, ngram, newState, arcWeight);
   } else {
     // second case: the new coverage and history don't already exist
     // TODO refactor this bit
@@ -504,7 +485,7 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
         return;
       }
       StateId nextStateId =
-          addFstStatesAndArcsNewState(state, ngram, applyNgramCost);
+          addFstStatesAndArcsNewState(state, ngram, arcWeight);
       newState = new State(nextStateId, newStateKey, newCost, hasInput);
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.insert(newState);
@@ -526,7 +507,7 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
       // remove states!!!
     } else {
       StateId nextStateId =
-          addFstStatesAndArcsNewState(state, ngram, applyNgramCost);
+          addFstStatesAndArcsNewState(state, ngram, arcWeight);
       newState = new State(nextStateId, newStateKey, newCost, hasInput);
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.insert(newState);
@@ -535,87 +516,42 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
 }
 
 template <class Arc>
-Cost Lattice<Arc>::cost(const State& state, const Ngram& rule,
-                        lm::ngram::State* nextKenlmState) const {
-  Cost res = 0;
-  Cost lmc = lmCost(state, rule, nextKenlmState);
-  Cost rc = ruleCost(rule, weights_, featureNames_);
-  res += weights_.getWeight("lm") * lmc + rc;
-  return res;
-}
-
-template <class Arc>
-Cost Lattice<Arc>::lmCost(const State& state, const Ngram& rule,
-                          lm::ngram::State* nextKenlmState) const {
-  Cost res = 0;
-  lm::ngram::State startKenlmStateTemp;
-  const lm::ngram::Vocabulary& vocab = languageModel_->GetVocabulary();
-  for (int i = 0; i < rule.size(); i++) {
-    if (rule[i] == STARTSENTENCE) {
-      CHECK_EQ(0, i) << "Ngram with a start-of-sentence marker in the middle.";
-      startKenlmStateTemp = languageModel_->BeginSentenceState();
-      continue;
-    }
-    if (i == 0) {
-      startKenlmStateTemp = state.getKenlmState();
-    } else if (i > 1 || rule[0] != 1) {
-      startKenlmStateTemp = *nextKenlmState;
-    }
-    // else startKenlmStateTemp has been set to
-    // languageModel_->BeginSentenceState()
-    res += languageModel_->Score(startKenlmStateTemp, index(rule[i]),
-                                 *nextKenlmState);
-  }
-  return res * (-log(10));
-}
-
-template <class Arc>
 void Lattice<Arc>::addFstStatesAndArcs(const State& state, const Ngram& ngram,
                                        const State* newState,
-                                       const float applyNgramCost) {
+                                       const Weight& weight) {
   StateId previousStateId = state.stateId();
   StateId nextStateId;
-  Weight arcCost;
   for (int i = 0; i < ngram.size(); ++i) {
     if (i == ngram.size() - 1) {
       nextStateId = newState->stateId();
-      arcCost = applyNgramCost;
+      fst_->AddArc(
+          previousStateId, Arc(ngram[i], ngram[i], weight, nextStateId));
     } else {
       nextStateId = fst_->AddState();
-      arcCost = Weight::One();
+      fst_->AddArc(
+          previousStateId, Arc(ngram[i], ngram[i], Weight::One(), nextStateId));
     }
-    fst_->AddArc(
-        previousStateId, Arc(ngram[i], ngram[i], arcCost, nextStateId));
     previousStateId = nextStateId;
   }
 }
 
 template <class Arc>
 typename Lattice<Arc>::StateId Lattice<Arc>::addFstStatesAndArcsNewState(
-    const State& state, const Ngram& ngram, const float applyNgramCost) {
+    const State& state, const Ngram& ngram, const Weight& weight) {
   StateId previousStateId = state.stateId();
   StateId nextStateId;
-  Weight arcCost;
   for (int i = 0; i < ngram.size(); ++i) {
-    arcCost = (i == ngram.size() - 1) ? applyNgramCost : Weight::One();
     nextStateId = fst_->AddState();
-    fst_->AddArc(
-        previousStateId, Arc(ngram[i], ngram[i], arcCost, nextStateId));
+    if (i == ngram.size() - 1) {
+      fst_->AddArc(
+          previousStateId, Arc(ngram[i], ngram[i], weight, nextStateId));
+    } else {
+      fst_->AddArc(
+          previousStateId, Arc(ngram[i], ngram[i], Weight::One(), nextStateId));
+    }
     previousStateId = nextStateId;
   }
   return nextStateId;
-}
-
-template <class Arc>
-const lm::WordIndex Lattice<Arc>::index(int id) const {
-  const lm::ngram::Vocabulary& vocab = languageModel_->GetVocabulary();
-  if (id == ENDSENTENCE) {
-    return vocab.Index("</s>");
-  }
-  if (id == STARTSENTENCE) {
-    return vocab.Index("<s>");
-  }
-  return vocab.Index(boost::lexical_cast<std::string>(id));
 }
 
 template <class Arc>

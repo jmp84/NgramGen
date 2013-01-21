@@ -8,7 +8,7 @@
 #ifndef FEATURECREATORIMPL_H_
 #define FEATURECREATORIMPL_H_
 
-#include "FeatureCreator.h"
+#include "features/FeatureCreator.h"
 
 namespace cam {
 namespace eng {

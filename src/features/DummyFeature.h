@@ -8,8 +8,8 @@
 #ifndef DUMMYFEATURE_H_
 #define DUMMYFEATURE_H_
 
-#include "Feature.h"
-#include "FeatureCreatorImpl.h"
+#include "features/Feature.h"
+#include "features/FeatureCreatorImpl.h"
 
 namespace cam {
 namespace eng {
