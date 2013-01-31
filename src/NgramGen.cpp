@@ -8,23 +8,12 @@
  ============================================================================
  */
 
-#include <fstream>
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/smart_ptr.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include <fst/fstlib.h>
 
-#include "Column.h"
-#include "features/Weights.h"
-#include "Lattice.h"
-#include "NgramLoader.h"
-#include "Range.h"
-#include "State.h"
-#include "StateKey.h"
+#include "Decoder.h"
 
-DEFINE_string(sentenceFile, "",
+DEFINE_string(sentence_file, "",
               "Name of a file containing sentences to be reordered");
 DEFINE_string(ngrams, "", "Name of a directory containing ngram and coverage "
               "files applicable to the input words");
@@ -49,78 +38,22 @@ DEFINE_string(weights, "", "Comma separated list of feature weights. "
 DEFINE_string(task, "decode", "Task: either 'decode' or 'tune'. If the task is "
               "decode, the output is a StdVectorFst. If the task is tune, then "
               "the output is a fst with sparse weights.");
+DEFINE_string(chop, "", "Defines the chopping strategy. Either 'silly' (chops "
+              "every n word where n is defined by --max_chop) or 'punctuation' "
+              "(chops after each punctuation or n word where punctuation is "
+              "defined by --punctuation and n is defined by --max_chop; "
+              "--wordmap needs also to be defined to check if a word id is a "
+              "punctuation symbol). By default, no chopping is done.");
+DEFINE_int32(max_chop, 0, "For choppers that use a max size for each chop.");
+DEFINE_string(
+    punctuation, "", "Punctuation file with one punctuation symbol per line. "
+        "Used for the punctuation chopper.");
+DEFINE_string(wordmap, "", "Word map. Used for the punctuation chopper to "
+    "check if a word id is a punctuation symbol.");
 
 namespace cam {
 namespace eng {
 namespace gen {
-
-/**
- * Reads a file line by line, each line is tokenized by whitespace and the
- * sequence of tokens is added as an element to the result.
- * @param fileName The input file name.
- * @param words A vector of vector of integers representing an array of word
- * sequences.
- */
-void parseInput(const std::string& fileName,
-                std::vector<std::vector<int> >* words) {
-  std::ifstream file(fileName.c_str());
-  CHECK(file.is_open()) << "Cannot open file " << fileName;
-  std::string line;
-  while (std::getline(file, line)) {
-    std::vector<std::string> stringWords;
-    boost::split(stringWords, line, boost::is_any_of(" "));
-    std::vector<int> sequence(stringWords.size());
-    std::transform(stringWords.begin(), stringWords.end(), sequence.begin(),
-                 boost::lexical_cast<int, std::string>);
-    words->push_back(sequence);
-  }
-}
-
-/**
- * Parses comma separated feature names into a vector of feature names.
- * @param featureNames The comma separated feature names.
- * @param features The output list of feature names.
- */
-void parseFeatures(const std::string& featureNames,
-                   std::vector<std::string>* features) {
-  // boost split for empty strings returns a vector of size 1 so we need to take
-  // care of that case
-  if (featureNames.empty()) {
-    features->clear();
-  }
-  else {
-    boost::split(*features, featureNames, boost::is_any_of(","));
-  }
-}
-
-/**
- * Parses a comma separated list of pair featureName=featureWeight into a
- * Weight object. The format is featureName1=weight1,featureName2=weight2 etc."
- * @param featureWeights The comma separated list of featureName=featureWeight
- * pairs
- * @param weights The output Weight object.
- */
-void parseWeights(const std::string& featureWeights, Weights* weights) {
-  if (featureWeights.empty()) {
-    weights->clear();
-    return;
-  }
-  std::vector<std::string> listPairFeatureNameFeatureWeight;
-  boost::split(
-      listPairFeatureNameFeatureWeight, featureWeights, boost::is_any_of(","));
-  for (int i = 0; i < listPairFeatureNameFeatureWeight.size(); ++i) {
-    std::vector<std::string> pairFeatureNameFeatureWeight;
-    boost::split(pairFeatureNameFeatureWeight,
-                 listPairFeatureNameFeatureWeight[i], boost::is_any_of("="));
-    CHECK_EQ(2, pairFeatureNameFeatureWeight.size()) <<
-        "Malformed feature weight pair: " <<
-        listPairFeatureNameFeatureWeight[i] <<
-        " in feature weight string: " << featureWeights;
-    weights->addWeight(
-        pairFeatureNameFeatureWeight[0],
-        boost::lexical_cast<float>(pairFeatureNameFeatureWeight[1]));
-  }
-}
 
 void checkArgs(int argc, char** argv) {
   std::string usage = "Generates a lattice of reordered sentences.\n\n Usage: ";
@@ -129,7 +62,7 @@ void checkArgs(int argc, char** argv) {
       "--lm=lmDirectory --fstoutput=fstoutputDirectory "
       "[--prune_nbest=<integer> | --prune_threshold=<double>]\n";
   google::ParseCommandLineFlags(&argc, &argv, true);
-  CHECK_NE("", FLAGS_sentenceFile) << "Missing input --sentenceFile" <<
+  CHECK_NE("", FLAGS_sentence_file) << "Missing input --sentence_file" <<
       std::endl << usage;
   CHECK_NE("", FLAGS_ngrams) << "Missing ngrams --ngram" << std::endl << usage;
   CHECK_NE("", FLAGS_lm) << "Missing language model directory --lm" <<
@@ -144,69 +77,22 @@ void checkArgs(int argc, char** argv) {
       FLAGS_task << ". The task can only be 'decode' or 'tune'";
 }
 
-template <class Arc>
-void decode(const vector<int>& inputWords, const int id,
-            const NgramLoader& ngramLoader, Lattice<Arc>* lattice) {
-  for (int i = 0; i < inputWords.size(); ++i) {
-    lattice->extend(ngramLoader, i, FLAGS_prune_nbest, FLAGS_prune_threshold,
-                    FLAGS_overlap);
-  }
-  lattice->markFinalStates(inputWords.size());
-  if (FLAGS_add_input) {
-    lattice->addInput();
-  }
-  if (FLAGS_when_lost_input) {
-    lattice->whenLostInput();
-  }
-  lattice->compactFst(FLAGS_dump_prune);
-  std::ostringstream output;
-  output << FLAGS_fstoutput << "/" << id << ".fst";
-  lattice->write(output.str());
-}
-
 } // namespace gen
 } // namespace eng
 } // namespace cam
 
 /**
- * This is the main program.
+ * Main function. Decodes several sentences from an input file.
  */
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   using namespace cam::eng::gen;
   checkArgs(argc, argv);
-  std::vector<std::vector<int> > inputWords;
-  parseInput(FLAGS_sentenceFile, &inputWords);
-  std::vector<std::string> features;
-  parseFeatures(FLAGS_features, &features);
-  Weights weights;
-  parseWeights(FLAGS_weights, &weights);
-  // +1 is for the language model.
-  std::vector<float> weightsForParams(features.size() + 1);
-  weightsForParams[0] = 1;
-  for (int i = 0; i < features.size(); ++i) {
-    weightsForParams[i + 1] = weights.getWeight(features[i]);
-  }
-  fst::TropicalSparseTupleWeight<float>::Params() = weightsForParams;
-  for (boost::scoped_ptr<IntegerRangeInterface> ir(
-      IntegerRangeInterface::initFactory(FLAGS_range));
-      !ir->done(); ir->next()) {
-    int id = ir->get();
-    LOG(INFO) << "Processing sentence number " << id;
-    NgramLoader ngramLoader;
-    std::ostringstream ngrams;
-    ngrams << FLAGS_ngrams << "/"<< id << ".r";
-    ngramLoader.loadNgram(ngrams.str());
-    std::ostringstream lm;
-    lm << FLAGS_lm << "/" << id << "/lm.4.gz";
-    if (FLAGS_task == "decode") {
-      decode(inputWords[id - 1], id, ngramLoader,
-             new Lattice<fst::StdArc>(
-                 inputWords[id - 1], lm.str(), features, weights));
-    } else if (FLAGS_task == "tune") {
-      decode(inputWords[id - 1], id, ngramLoader,
-             new Lattice<TupleArc32>(
-                 inputWords[id - 1], lm.str(), features, weights));
-    }
-  }
+  Decoder decoder(
+      FLAGS_sentence_file, FLAGS_ngrams, FLAGS_lm, FLAGS_fstoutput,
+      FLAGS_range, FLAGS_overlap, FLAGS_prune_nbest, FLAGS_prune_threshold,
+      FLAGS_dump_prune, FLAGS_add_input, FLAGS_when_lost_input, FLAGS_features,
+      FLAGS_weights, FLAGS_task, FLAGS_chop, FLAGS_max_chop, FLAGS_punctuation,
+      FLAGS_wordmap);
+  decoder.decode();
 }

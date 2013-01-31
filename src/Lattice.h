@@ -42,9 +42,12 @@ public:
    * Constructor. Creates an empty array of size the size of the input. Creates
    * an initial state and adds it to the lattice.
    * @param words The input words to be reordered.
-   * @param lmfile The language model file (in arpa or kenlm format).
+   * @param languageModel The language model.
+   * @param featureNames The feature names.
+   * @param weights The feature weights.
    */
-  Lattice(const std::vector<int>& words, const std::string& lmfile,
+  Lattice(const std::vector<int>& words,
+          boost::shared_ptr<lm::ngram::Model> languageModel,
           const std::vector<std::string>& featureNames, const Weights& weights);
 
   /**
@@ -62,10 +65,12 @@ public:
    * @param pruneThreshold The float pruning threshold
    * @param maxOverlap The maximum overlap between state coverage and n-gram
    * coverage
+   * @param chunkId The chunk id for the chunk we are decoding in case the input
+   * sentences is chopped into multiple parts (for speed and memory).
    */
   void extend(const NgramLoader& ngramLoader, const int columnIndex,
               const int pruneNbest, const float pruneThreshold,
-              const int maxOverlap);
+              const int maxOverlap, const int chunkId);
 
   /**
    * Set final states for states that are in the column indexed by the length
@@ -191,7 +196,7 @@ private:
   std::vector<Column> columns_;
 
   /** Language model in KenLM format. */
-  lm::ngram::Model* languageModel_;
+  boost::shared_ptr<lm::ngram::Model> languageModel_;
 
   /** Input words to be reordered. */
   std::vector<int> inputWords_;
@@ -206,11 +211,12 @@ private:
 };
 
 template <class Arc>
-Lattice<Arc>::Lattice(const std::vector<int>& words, const std::string& lmfile,
+Lattice<Arc>::Lattice(const std::vector<int>& words,
+                      boost::shared_ptr<lm::ngram::Model> languageModel,
                       const std::vector<std::string>& featureNames,
                       const Weights& weights) :
     fst_(new fst::VectorFst<Arc>()), columns_(words.size() + 1),
-    languageModel_(new lm::ngram::Model(lmfile.c_str())), inputWords_(words),
+    languageModel_(languageModel), inputWords_(words),
     featureNames_(featureNames), weights_(weights) {
   Coverage emptyCoverage(words.size());
   // We initialize with a null context rather than a sentence begin context
@@ -226,21 +232,19 @@ Lattice<Arc>::Lattice(const std::vector<int>& words, const std::string& lmfile,
 }
 
 template <class Arc>
-Lattice<Arc>::~Lattice() {
-  delete languageModel_;
-}
+Lattice<Arc>::~Lattice() {}
 
 template <class Arc>
 void Lattice<Arc>::extend(const NgramLoader& ngramLoader, const int columnIndex,
                           const int pruneNbest, const float pruneThreshold,
-                          const int maxOverlap) {
+                          const int maxOverlap, const int chunkId) {
   CHECK_EQ(columns_[columnIndex].statesIndexByStateKey_.size(),
            columns_[columnIndex].statesSortedByCost_.size()) <<
                "Inconsistent number of states in column " << columnIndex;
   VLOG(1) << "Number of states in column " << columnIndex << " " <<
       columns_[columnIndex].statesSortedByCost_.size();
   const std::map<Ngram, std::vector<Coverage> >& ngrams =
-      ngramLoader.ngrams();
+      ngramLoader.ngrams(chunkId);
   std::set<State*, StatePointerComparator>::const_iterator stateIt =
         columns_[columnIndex].statesSortedByCost_.begin();
   if (stateIt == columns_[columnIndex].statesSortedByCost_.end()) {

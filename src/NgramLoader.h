@@ -31,22 +31,45 @@ class NgramLoader {
 public:
   /**
    * Reads a file containing n-grams and coverages and loads them.
-   * @param fileName
+   * @param fileName The file name.
+   * @param splitPositions The zero-based positions in the input that indicate
+   * where to split it. Position p means that a new chunk must start at position
+   * p. N-grams with coverage relevant to a specific chunk will be loaded for
+   * that chunk.
    */
-  void loadNgram(const std::string& fileName);
+  void loadNgram(
+      const std::string& fileName, const std::vector<int>& splitPositions);
 
   /**
-   * Getter.
-   * @return The ngrams.
+   * Gets the n-grams for a specific zero-based chunk id.
+   * @param chunkId The zero-based chunk id.
+   * @return The n-grams for a specific zero-based chunk id.
    */
-  const std::map<Ngram, std::vector<Coverage> >& ngrams() const;
+  const std::map<Ngram, std::vector<Coverage> >& ngrams(
+      const int chunkId) const;
 
 private:
   /**
-   * Map between an n-gram (sequence of words) and coverages. There may be
-   * multiple coverages if a word in the input is repeated.
+   * Gets the chunk id where the coverage should belong. For example, if there
+   * is no split, then all coverages belong to chunkId zero. For an input
+   * "a b c d" and split positions <2>, then a coverage 1100 belongs to chunkId
+   * zero, a coverage 0011 belongs to chunkId one, and a coverage 0110 belongs
+   * nowhere (by convention, chunkId minus one).
+   * @param coverage The coverage.
+   * @param splitPositions The split positions (zero-based, position p indicates
+   * that a new chunk should be started).
+   * @return The chunk id that the coverage belongs two. Minus one if the
+   * coverage overlaps multiple chunks.
    */
-  std::map<Ngram, std::vector<Coverage> > ngrams_;
+  int getChunkId(const Coverage& coverage,
+                 const std::vector<int>& splitPositions);
+
+  /**
+   * List of maps between an n-gram (sequence of words) and coverages.
+   * There may be multiple coverages if a word in the input is repeated.
+   * The list may have more than one element if the input is chopped.
+   */
+  std::vector<std::map<Ngram, std::vector<Coverage> > > ngrams_;
 
 };
 

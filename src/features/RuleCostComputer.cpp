@@ -17,7 +17,7 @@ namespace eng {
 namespace gen {
 
 Cost lmCost(const State& state, const Ngram& rule,
-            lm::ngram::Model* languageModel,
+            boost::shared_ptr<lm::ngram::Model> languageModel,
             lm::ngram::State* nextKenlmState) {
   Cost res = 0;
   lm::ngram::State startKenlmStateTemp;

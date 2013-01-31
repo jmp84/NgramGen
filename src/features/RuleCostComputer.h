@@ -44,7 +44,7 @@ class State;
  * @return
  */
 Cost lmCost(const State& state, const Ngram& rule,
-            lm::ngram::Model* languageModel,
+            boost::shared_ptr<lm::ngram::Model> languageModel,
             lm::ngram::State* nextKenlmState);
 
 /**
@@ -58,7 +58,7 @@ struct RuleCostAndWeightComputer {
   const Cost operator() (
       const State& state, const Ngram& rule, const Weights& weights,
       const std::vector<std::string>& featureNames,
-      lm::ngram::Model* languageModel,
+      boost::shared_ptr<lm::ngram::Model> languageModel,
       lm::ngram::State* nextKenlmState, typename Arc::Weight* weight) {
     Cost res = lmCost(state, rule, languageModel, nextKenlmState);
     for (int i = 0; i < featureNames.size(); ++i) {
@@ -79,7 +79,7 @@ struct RuleCostAndWeightComputer<TupleArc32> {
   const Cost operator() (
       const State& state, const Ngram& rule, const Weights& weights,
       const std::vector<std::string>& featureNames,
-      lm::ngram::Model* languageModel,
+      boost::shared_ptr<lm::ngram::Model> languageModel,
       lm::ngram::State* nextKenlmState, TupleW32* weight) {
     Cost res = lmCost(state, rule, languageModel, nextKenlmState);
     // Warning: here the first index is 1 because 0 is reserved by
