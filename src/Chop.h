@@ -36,11 +36,12 @@ public:
   /**
    * Chops an input sentence into only one chunk.
    * @param inputSentence The input sentence to be chopped.
-   * @return An empty vector, meaning that there is no position where to chop
-   * the input.
+   * @param id The sentence id.
+   * @return A vector containing one element which is the size of the input
+   * sentence.
    */
   virtual std::vector<int> chop(
-      const std::vector<int>& inputSentence);
+      const std::vector<int>& inputSentence, const int id);
 };
 
 /**
@@ -61,12 +62,12 @@ public:
    * @param inputSentence The input sentence to chop.
    * @return The positions where to chop the input. The positions are
    * zero-based. A position p indicates that the word in zero-based position
-   * p starts a new chunk. For example, if the input is "a b c d" and the
+   * p starts a new chunk. For example, if the input is "a b c" and the
    * maximum number of words per chunk is 2, then the result will be a vector
-   * <2>. If the input is "a b c d e", the the result is <2, 4>.
+   * <2, 3>. If the input is "a b c d e", the the result is <2, 4, 5>.
    */
   virtual std::vector<int> chop(
-      const std::vector<int>& inputSentence);
+      const std::vector<int>& inputSentence, const int id);
 
 protected:
   /** Maximum number of words in a chunk. */
@@ -102,7 +103,7 @@ public:
    * and indicate where to start a new chunk.
    */
   virtual std::vector<int> chop(
-      const std::vector<int>& inputSentence);
+      const std::vector<int>& inputSentence, const int id);
 
 private:
   /**
@@ -124,6 +125,41 @@ private:
   /** Word map. */
   boost::shared_ptr<Vocab> wordmap_;
 };
+
+/**
+ * Chopper that reads chopping information from a file.
+ */
+class ChopperFromFile : public Chopper {
+public:
+  /**
+   * Constructor.
+   * @param chopFile File containing chopping information. The format is one
+   * chopping information per sentence. Each line contains space separated
+   * integers, each integer indicates the word index where to start the next
+   * chunk, for example "3 5" means there are two chunks, the first chunk from
+   * word 0 to word 2, and the second chunk from word 3 to word 4. 5 is the
+   * input sentence size.
+   */
+  ChopperFromFile(const std::string& chopFile);
+
+  /**
+   * Destructor.
+   */
+  virtual ~ChopperFromFile();
+
+  /**
+   * Chops the input into chunks based on the info given in a chop file.
+   * @param inputSentence The input sentence to be chopped.
+   * @return The positions where to chop the input. The positions are zero-based
+   * and indicate where to start a new chunk.
+   */
+  virtual std::vector<int> chop(
+      const std::vector<int>& inputSentence, const int id);
+
+private:
+  std::vector<std::vector<int> > splits_;
+};
+
 
 } // namespace gen
 } // namespace eng

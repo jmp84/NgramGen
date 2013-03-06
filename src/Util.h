@@ -33,6 +33,22 @@ enum {
  */
 const lm::WordIndex index(const lm::ngram::Vocabulary& vocab, int id);
 
+/**
+ * Utility to print a vector.
+ * @param vec The vector to be printed.
+ * @return A string containing the vector elements separated by a space.
+ */
+template <class T>
+std::string toString(const std::vector<T>& vec) {
+  std::stringstream res;
+  std::string separator = "";
+  for (int i = 0; i < vec.size(); ++i) {
+    res << separator << vec[i];
+    separator = " ";
+  }
+  return res.str();
+}
+
 } // namespace gen
 } // namespace eng
 } // namespace cam

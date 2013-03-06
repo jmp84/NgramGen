@@ -8,6 +8,7 @@
 #ifndef DECODER_H_
 #define DECODER_H_
 
+#include "Constraints.h"
 #include "Lattice.h"
 
 namespace cam {
@@ -42,6 +43,9 @@ public:
    * @param maxChop Maximum number of words per chunk when chopping.
    * @param punctuation Punctuation file for chopping with punctuation.
    * @param wordmap Wordmap file.
+   * @param chopFile File with chopping info.
+   * @param constraints Constraints strategy.
+   * @param constraintsFile Constraints file.
    */
   Decoder(
       const std::string& sentenceFile, const std::string& ngrams,
@@ -51,7 +55,9 @@ public:
       const bool whenLostInput, const std::string& features,
       const std::string& weights, const std::string& task,
       const std::string& chop, const int maxChop,
-      const std::string& punctuation, const std::string& wordmap);
+      const std::string& punctuation, const std::string& wordmap,
+      const std::string& chopFile, const std::string& constraints,
+      const std::string& constraintsFile);
 
   /**
    * Decodes everything.
@@ -130,6 +136,8 @@ private:
   std::string task_;
   /** Chopper interface. */
   boost::shared_ptr<Chopper> chopper_;
+  /** Constraint interface. */
+  boost::shared_ptr<Constraints> constraints_;
 };
 
 template <class Arc>
@@ -137,14 +145,19 @@ void Decoder::decode(
     const std::vector<int>& inputSentence,
     const std::vector<int>& splitPositions, const NgramLoader& ngramLoader,
     const int id, Lattice<Arc>* lattice) const {
+  CHECK(!splitPositions.empty()) << "Split positions are empty, there should be"
+      " at least one element which is the size of the input sentence.";
   int chunkId = 0;
-  int splitPosition = splitPositions.empty() ? inputSentence.size() :
-      splitPositions[chunkId];
+  int splitPosition = splitPositions[0];
   for (int i = 0; i < inputSentence.size(); ++i) {
     if (i >= splitPosition) {
       ++chunkId;
-      splitPosition = chunkId < splitPositions.size() ?
-          splitPositions[chunkId] : inputSentence.size();
+      // because the last split position is inputSentence.size(), we know that
+      // splitPositions[chunkId] exists.
+      CHECK_LT(chunkId, splitPositions.size()) << "Chunk id " << chunkId <<
+          " should be less than the size of the split positions: " <<
+          splitPositions.size() << " in sentence id " << id;
+      splitPosition = splitPositions[chunkId];
     }
     lattice->extend(
         ngramLoader, i, pruneNbest_, pruneThreshold_, overlap_, chunkId);

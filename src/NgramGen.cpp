@@ -50,6 +50,16 @@ DEFINE_string(
         "Used for the punctuation chopper.");
 DEFINE_string(wordmap, "", "Word map. Used for the punctuation chopper to "
     "check if a word id is a punctuation symbol.");
+DEFINE_string(chop_file, "", "File with chopping info. The format is one "
+    "chopping info per line. Each line is space separated integers. Each "
+    "integer indicates the zero-based index of the first word of the next "
+    "chunk.");
+DEFINE_string(constraints, "", "Defines the constraints strategy. Only 'chunk' "
+    "is supported. By default, no constraints are imposed.");
+DEFINE_string(constraints_file, "", "File with constraints. The constraints are"
+    " one per line. Each line is a bit string. A one indicates that the chunk "
+    "may be reordered. A zero indicates that the chunk cannot be reordered. "
+    "Chunks are currently defined by chopping.");
 
 namespace cam {
 namespace eng {
@@ -93,6 +103,7 @@ int main(int argc, char** argv) {
       FLAGS_range, FLAGS_overlap, FLAGS_prune_nbest, FLAGS_prune_threshold,
       FLAGS_dump_prune, FLAGS_add_input, FLAGS_when_lost_input, FLAGS_features,
       FLAGS_weights, FLAGS_task, FLAGS_chop, FLAGS_max_chop, FLAGS_punctuation,
-      FLAGS_wordmap);
+      FLAGS_wordmap, FLAGS_chop_file, FLAGS_constraints,
+      FLAGS_constraints_file);
   decoder.decode();
 }

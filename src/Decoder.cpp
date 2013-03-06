@@ -21,7 +21,9 @@ Decoder::Decoder(const std::string& sentenceFile, const std::string& ngrams,
                  const bool whenLostInput, const std::string& features,
                  const std::string& weights, const std::string& task,
                  const std::string& chop, const int maxChop,
-                 const std::string& punctuation, const std::string& wordmap) :
+                 const std::string& punctuation, const std::string& wordmap,
+                 const std::string& chopFile, const std::string& constraints,
+                 const std::string& constraintsFile) :
                    ngrams_(ngrams), lm_(lm), fstOutput_(fstOutput),
                    range_(range), overlap_(overlap), pruneNbest_(pruneNbest),
                    pruneThreshold_(pruneThreshold), dumpPrune_(dumpPrune),
@@ -34,8 +36,15 @@ Decoder::Decoder(const std::string& sentenceFile, const std::string& ngrams,
     chopper_.reset(new SillyChopper(maxChop));
   } else if (chop == "punctuation") {
     chopper_.reset(new PunctuationChopper(maxChop, punctuation, wordmap));
+  } else if (chop == "from_file") {
+    chopper_.reset(new ChopperFromFile(chopFile));
   } else {
     chopper_.reset(new Chopper());
+  }
+  if (constraints == "chunk") {
+    constraints_.reset(new ChunkConstraints(constraintsFile));
+  } else {
+    constraints_.reset(new Constraints());
   }
 }
 
@@ -50,11 +59,12 @@ void Decoder::decode() const {
 
 void Decoder::decode(
     const std::vector<int>& inputSentence, const int id) const {
-  std::vector<int> splitPositions = chopper_->chop(inputSentence);
-  NgramLoader ngramLoader;
+  std::vector<int> splitPositions = chopper_->chop(inputSentence, id);
+  std::vector<bool> chunksToReorder = constraints_->constrain(id);
+  NgramLoader ngramLoader(inputSentence);
   std::ostringstream ngramFile;
   ngramFile << ngrams_ << "/" << id << ".r";
-  ngramLoader.loadNgram(ngramFile.str(), splitPositions);
+  ngramLoader.loadNgram(ngramFile.str(), splitPositions, chunksToReorder);
   std::ostringstream lmFile;
   lmFile << lm_ << "/" << id << "/lm.4.gz";
   boost::shared_ptr<lm::ngram::Model> languageModel(

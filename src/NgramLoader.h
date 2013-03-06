@@ -30,6 +30,12 @@ namespace gen {
 class NgramLoader {
 public:
   /**
+   * Constructor.
+   * @param inputSentence The input sentence to be reordered.
+   */
+  NgramLoader(const std::vector<int>& inputSentence);
+
+  /**
    * Reads a file containing n-grams and coverages and loads them.
    * @param fileName The file name.
    * @param splitPositions The zero-based positions in the input that indicate
@@ -38,7 +44,8 @@ public:
    * that chunk.
    */
   void loadNgram(
-      const std::string& fileName, const std::vector<int>& splitPositions);
+      const std::string& fileName, const std::vector<int>& splitPositions,
+      const std::vector<bool>& chunksToReorder);
 
   /**
    * Gets the n-grams for a specific zero-based chunk id.
@@ -70,6 +77,9 @@ private:
    * The list may have more than one element if the input is chopped.
    */
   std::vector<std::map<Ngram, std::vector<Coverage> > > ngrams_;
+
+  /** Input sentence to be reordered. */
+  std::vector<int> inputSentence_;
 
 };
 
