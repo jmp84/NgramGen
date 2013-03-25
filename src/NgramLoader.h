@@ -57,6 +57,14 @@ public:
 
 private:
   /**
+   * Converts a position list to a coverage bitstring.
+   * @param positionList The position list. The format is pos1_pos2 etc.
+   * @param coverage The resulting coverage bitstring.
+   */
+  void positionList2Coverage(const std::string& positionList,
+                             Coverage* coverage);
+
+  /**
    * Gets the chunk id where the coverage should belong. For example, if there
    * is no split, then all coverages belong to chunkId zero. For an input
    * "a b c d" and split positions <2>, then a coverage 1100 belongs to chunkId

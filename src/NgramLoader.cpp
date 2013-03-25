@@ -41,7 +41,8 @@ void NgramLoader::loadNgram(const std::string& fileName,
     boost::split(parts, line, boost::is_any_of(" "));
     CHECK_LE(3, parts.size()) << "Wrong format, should have at least 3 parts: "
         << line;
-    Coverage coverage(parts[1]);
+    Coverage coverage;
+    positionList2Coverage(parts[1], &coverage);
     // chunkId is the chunk id where the coverage should belong. For example, if
     // there is no split, then all coverages belong to chunkId zero. For an
     // input "a b c d" and split positions <2>, then a coverage 1100 belongs to
@@ -94,6 +95,21 @@ const std::map<Ngram, std::vector<Coverage> >& NgramLoader::ngrams(
   CHECK_LT(chunkId, ngrams_.size()) << "Invalid chunk id " << chunkId << ". "
       "Must be less than the size of the number of chunks: " << ngrams_.size();
   return ngrams_[chunkId];
+}
+
+void NgramLoader::positionList2Coverage(const std::string& positionList,
+                                        Coverage* coverage) {
+  coverage->resize(inputSentence_.size());
+  std::vector<std::string> stringPositions;
+  boost::split(stringPositions, positionList, boost::is_any_of("_"));
+  std::vector<int> positions(stringPositions.size());
+  std::transform(stringPositions.begin(), stringPositions.end(),
+                 positions.begin(), boost::lexical_cast<int, std::string>);
+  // here we emulate the behaviour of the boost::dynamic_bitset constructor
+  // from a string that fills backwards.
+  for (int i = 0; i < positions.size(); ++i) {
+    coverage->set(inputSentence_.size() - 1 - positions[i]);
+  }
 }
 
 int NgramLoader::getChunkId(const Coverage& coverage,

@@ -111,11 +111,11 @@ void Decoder::parseWeights(const std::string& featureWeights) {
     return;
   }
   std::vector<std::string> listPairFeatureNameFeatureWeight;
+  boost::split(listPairFeatureNameFeatureWeight, featureWeights,
+               boost::is_any_of(","));
   // +1 is for the language model.
   std::vector<float> weightsForParams(
       listPairFeatureNameFeatureWeight.size() + 1);
-  boost::split(listPairFeatureNameFeatureWeight, featureWeights,
-               boost::is_any_of(","));
   weightsForParams[0] = 1;
   for (int i = 0; i < listPairFeatureNameFeatureWeight.size(); ++i) {
     std::vector<std::string> pairFeatureNameFeatureWeight;
