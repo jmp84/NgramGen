@@ -10,6 +10,8 @@
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 #include <glog/logging.h>
 
 #include "Util.h"
@@ -29,15 +31,18 @@ void NgramLoader::loadNgram(const std::string& fileName,
   // input sentence size.
   ngrams_.resize(splitPositions.size());
   std::ifstream file(fileName.c_str());
+  boost::iostreams::filtering_istream istream;
+  istream.push(boost::iostreams::gzip_decompressor());
+  istream.push(file);
   CHECK(file.is_open()) << "Cannot open file " << fileName;
   std::string line;
   // skip the first two lines which are the ITG rules
-  std::getline(file, line);
-  std::getline(file, line);
+  std::getline(istream, line);
+  std::getline(istream, line);
   std::vector<std::string> parts;
   std::vector<std::string> ngramString;
   Ngram ngramInt;
-  while (std::getline(file, line)) {
+  while (std::getline(istream, line)) {
     boost::split(parts, line, boost::is_any_of(" "));
     CHECK_LE(3, parts.size()) << "Wrong format, should have at least 3 parts: "
         << line;

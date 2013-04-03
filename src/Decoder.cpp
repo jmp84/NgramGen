@@ -63,7 +63,7 @@ void Decoder::decode(
   std::vector<bool> chunksToReorder = constraints_->constrain(id);
   NgramLoader ngramLoader(inputSentence);
   std::ostringstream ngramFile;
-  ngramFile << ngrams_ << "/" << id << ".r";
+  ngramFile << ngrams_ << "/" << id << ".r.gz";
   ngramLoader.loadNgram(ngramFile.str(), splitPositions, chunksToReorder);
   std::ostringstream lmFile;
   lmFile << lm_ << "/" << id << "/lm.4.gz";
