@@ -70,7 +70,8 @@ public:
    */
   void extend(const NgramLoader& ngramLoader, const int columnIndex,
               const int pruneNbest, const float pruneThreshold,
-              const int maxOverlap, const int chunkId);
+              const int maxOverlap, const int chunkId,
+              const bool allowDeletion);
 
   /**
    * Set final states for states that are in the column indexed by the length
@@ -140,14 +141,27 @@ private:
    * @param pruneNbest The maximum number of states in a column.
    * @param pruneThreshold The beam threshold pruning parameter.
    */
-  void extend(const State& state, const std::vector<int>& ngram,
+  void extend(const State& state, const Ngram& ngram,
               const Coverage& coverage, const int pruneNbest,
               const float pruneThreshold);
 
   /**
+   * Extends a state with a unigram and deletes it, i.e. adds an epsilon arc
+   * in the fst.
+   * @param state The state to be extended.
+   * @param unigram The unigram used to extend the state.
+   * @param coverage The coverage of the unigram.
+   * @param pruneNbest The maximum number of states in a column.
+   * @param pruneThreshold The beam threshold pruning parameter.
+   */
+  void extendDeletion(const State& state, const Ngram& unigram,
+                      const Coverage& coverage, const int pruneNbest,
+                      const float pruneThreshold);
+
+  /**
    * Adds states and arcs to the fst based on the start state, the end state,
    * the n-gram begin applied and the cost of the n-gram. If the n-gram is
-   * greater than a unigram, then intermediate are added to the fst.
+   * greater than a unigram, then intermediate states are added to the fst.
    * @param state The start state.
    * @param ngram The n-gram being applied.
    * @param newState The end state.
@@ -159,6 +173,15 @@ private:
   void addFstStatesAndArcs(
       const State& state, const Ngram& ngram, const State* newState,
       const Weight& weight);
+
+  /**
+   * Adds an epsilon arc to the fst. This corresponds to a deletion.
+   * @param state The start state
+   * @param newState The end state.
+   * @param weight The weight to put on the arc.
+   */
+  void addFstDeletion(
+      const State& state, const State* newState, const Weight& weight);
 
   /**
    * Adds states and arcs to the fst based on the start state,
@@ -176,6 +199,15 @@ private:
    */
   StateId addFstStatesAndArcsNewState(
       const State& state, const Ngram& ngram, const Weight& weight);
+
+  /**
+   * Adds an epsilon arc to the fst. This corresponds to a deletion. A new
+   * fst state is created as end state of the epsilon arc.
+   * @param state
+   * @param weight
+   * @return
+   */
+  StateId addFstDeletionNewState(const State& state, const Weight& weight);
 
   /**
    * Checks if the state obtained by extension will contain a hypothesis
@@ -237,7 +269,8 @@ Lattice<Arc>::~Lattice() {}
 template <class Arc>
 void Lattice<Arc>::extend(const NgramLoader& ngramLoader, const int columnIndex,
                           const int pruneNbest, const float pruneThreshold,
-                          const int maxOverlap, const int chunkId) {
+                          const int maxOverlap, const int chunkId,
+                          const bool allowDeletion) {
   CHECK_EQ(columns_[columnIndex].statesIndexByStateKey_.size(),
            columns_[columnIndex].statesSortedByCost_.size()) <<
                "Inconsistent number of states in column " << columnIndex;
@@ -246,7 +279,7 @@ void Lattice<Arc>::extend(const NgramLoader& ngramLoader, const int columnIndex,
   const std::map<Ngram, std::vector<Coverage> >& ngrams =
       ngramLoader.ngrams(chunkId);
   std::set<State*, StatePointerComparator>::const_iterator stateIt =
-        columns_[columnIndex].statesSortedByCost_.begin();
+      columns_[columnIndex].statesSortedByCost_.begin();
   if (stateIt == columns_[columnIndex].statesSortedByCost_.end()) {
     return;
   }
@@ -267,6 +300,12 @@ void Lattice<Arc>::extend(const NgramLoader& ngramLoader, const int columnIndex,
                      maxOverlap, &ngramToApply)) {
           extend(**stateIt, ngramToApply, ngramIt->second[i], pruneNbest,
                  pruneThreshold);
+          if (allowDeletion && ngramToApply.size() == 1 &&
+              ngramToApply[0] !=STARTSENTENCE &&
+              ngramToApply[0] != ENDSENTENCE) {
+            extendDeletion(**stateIt, ngramToApply, ngramIt->second[i],
+                           pruneNbest, pruneThreshold);
+          }
           // we break to use only the first coverage of the ngram to avoid
           // spurious ambiguity (and therefore to have better pruning: e.g. if
           // we keep 2 states in a column and the first two correspond to the
@@ -322,7 +361,8 @@ void Lattice<Arc>::compactFst(const float pruneWeight) {
     Weight w = makeWeight(pruneWeight);
     fst::Prune(&*fst_, w);
   }
-
+  // we need to rmepsilon if deletions are allowed.
+  fst::RmEpsilon(&(*fst_));
   fst::VectorFst<Arc>* tempfst = new fst::VectorFst<Arc>();
   fst::Determinize(*fst_, tempfst);
   fst_.reset(tempfst);
@@ -520,6 +560,95 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
 }
 
 template <class Arc>
+void Lattice<Arc>::extendDeletion(
+    const State& state, const Ngram& unigram, const Coverage& coverage,
+    const int pruneNbest, const float pruneThreshold) {
+  // check if we have a unigram, deletions are not allowed (for now at least)
+  // for n-grams of size more than 1.
+  CHECK_EQ(1, unigram.size()) << "Deletions are not allowed for n-grams other "
+      "than unigrams";
+  Coverage newCoverage = state.coverage() | coverage;
+  int columnIndex = newCoverage.count();
+  // duplicate the history
+  lm::ngram::State* nextKenlmState = new lm::ngram::State();
+  *nextKenlmState = state.getKenlmState();
+  // no cost
+  Weight arcWeight = Weight::One();
+  // new cost is the same as the old cost
+  Cost newCost = state.cost();
+  StateKey* newStateKey = new StateKey(newCoverage, *nextKenlmState);
+  delete nextKenlmState;
+  State* newState;
+  boost::unordered_map<StateKey, State*>::const_iterator findNewStateKey =
+      columns_[columnIndex].statesIndexByStateKey_.find(*newStateKey);
+  // check if the new state will contain a hypothesis corresponding to the
+  // partial input. Here we are deleting a unigram so the input is not there.
+  bool hasInput = false;
+  if (findNewStateKey != columns_[columnIndex].statesIndexByStateKey_.end()) {
+    // first case: the new coverage and history already exist
+    Cost existingCost = findNewStateKey->second->cost();
+    State* oldState = findNewStateKey->second;
+    // if the new cost is smaller, then we need to remove the state from the
+    // set containing states sorted by cost then reinsert a new state so the
+    // ordering is still correct.
+    if (newCost < existingCost) {
+      newState = new State(oldState->stateId(), newStateKey, newCost,
+                           hasInput || oldState->hasInput());
+      columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
+      columns_[columnIndex].statesSortedByCost_.erase(oldState);
+      columns_[columnIndex].statesSortedByCost_.insert(newState);
+      delete oldState;
+    } else {
+      delete newStateKey;
+      newState = oldState;
+      if (hasInput) {
+        newState->setHasInput(hasInput);
+      }
+    }
+    // add deletion arc
+    addFstDeletion(state, newState, arcWeight);
+  } else {
+    // second case: the new coverage and history don't already exist
+    // TODO refactor this bit
+    if (pruneNbest > 0 && columnIndex != inputWords_.size() &&
+        columns_[columnIndex].statesSortedByCost_.size() >= pruneNbest) {
+      std::set<State*, StatePointerComparator>::const_iterator stateIt =
+          columns_[columnIndex].statesSortedByCost_.end();
+      stateIt--;
+      Cost maxCost = (*stateIt)->cost();
+      if (newCost >= maxCost) {
+        return;
+      }
+      StateId nextStateId = addFstDeletionNewState(state, arcWeight);
+      newState = new State(nextStateId, newStateKey, newCost, hasInput);
+      columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
+      columns_[columnIndex].statesSortedByCost_.insert(newState);
+      stateIt = columns_[columnIndex].statesSortedByCost_.end();
+      stateIt--;
+      columns_[columnIndex].statesIndexByStateKey_.erase(*((*stateIt)->stateKey()));
+      columns_[columnIndex].statesSortedByCost_.erase(stateIt);
+    }
+    else if (pruneThreshold > 0 && columnIndex != inputWords_.size() &&
+        !columns_[columnIndex].empty()) {
+      std::set<State*, StatePointerComparator>::const_iterator stateIt =
+          columns_[columnIndex].statesSortedByCost_.begin();
+      Cost minCost = (*stateIt)->cost();
+      Cost beam = minCost + pruneThreshold;
+      if (newCost > beam) {
+        return;
+      }
+      // TODO if newCost is the best cost, the beam changes and we need to
+      // remove states!!!
+    } else {
+      StateId nextStateId = addFstDeletionNewState(state, arcWeight);
+      newState = new State(nextStateId, newStateKey, newCost, hasInput);
+      columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
+      columns_[columnIndex].statesSortedByCost_.insert(newState);
+    }
+  }
+}
+
+template <class Arc>
 void Lattice<Arc>::addFstStatesAndArcs(const State& state, const Ngram& ngram,
                                        const State* newState,
                                        const Weight& weight) {
@@ -540,6 +669,15 @@ void Lattice<Arc>::addFstStatesAndArcs(const State& state, const Ngram& ngram,
 }
 
 template <class Arc>
+void Lattice<Arc>::addFstDeletion(const State& state, const State* newState,
+                                  const Weight& weight) {
+  StateId previousStateId = state.stateId();
+  StateId nextStateId = newState->stateId();
+  // add an epsilon arc
+  fst_->AddArc(previousStateId, Arc(0, 0, weight, nextStateId));
+}
+
+template <class Arc>
 typename Lattice<Arc>::StateId Lattice<Arc>::addFstStatesAndArcsNewState(
     const State& state, const Ngram& ngram, const Weight& weight) {
   StateId previousStateId = state.stateId();
@@ -555,6 +693,16 @@ typename Lattice<Arc>::StateId Lattice<Arc>::addFstStatesAndArcsNewState(
     }
     previousStateId = nextStateId;
   }
+  return nextStateId;
+}
+
+template <class Arc>
+typename Lattice<Arc>::StateId Lattice<Arc>::addFstDeletionNewState(
+    const State& state, const Weight& weight) {
+  StateId previousStateId = state.stateId();
+  StateId nextStateId = fst_->AddState();
+  // add an epsilon arc
+  fst_->AddArc(previousStateId, Arc(0, 0, weight, nextStateId));
   return nextStateId;
 }
 

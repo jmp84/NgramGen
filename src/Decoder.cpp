@@ -23,12 +23,12 @@ Decoder::Decoder(const std::string& sentenceFile, const std::string& ngrams,
                  const std::string& chop, const int maxChop,
                  const std::string& punctuation, const std::string& wordmap,
                  const std::string& chopFile, const std::string& constraints,
-                 const std::string& constraintsFile) :
+                 const std::string& constraintsFile, const bool allowDeletion) :
                    ngrams_(ngrams), lm_(lm), fstOutput_(fstOutput),
                    range_(range), overlap_(overlap), pruneNbest_(pruneNbest),
                    pruneThreshold_(pruneThreshold), dumpPrune_(dumpPrune),
                    addInput_(addInput), whenLostInput_(whenLostInput),
-                   task_(task) {
+                   task_(task), allowDeletion_(allowDeletion) {
   parseInput(sentenceFile);
   parseFeatures(features);
   parseWeights(weights);

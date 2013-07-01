@@ -60,6 +60,8 @@ DEFINE_string(constraints_file, "", "File with constraints. The constraints are"
     " one per line. Each line is a bit string. A one indicates that the chunk "
     "may be reordered. A zero indicates that the chunk cannot be reordered. "
     "Chunks are currently defined by chopping.");
+DEFINE_bool(allow_deletion, false, "Allows unigrams to be deleted (an epsilon "
+    "arc will be added to the resulting fst).");
 
 namespace cam {
 namespace eng {
@@ -104,6 +106,6 @@ int main(int argc, char** argv) {
       FLAGS_dump_prune, FLAGS_add_input, FLAGS_when_lost_input, FLAGS_features,
       FLAGS_weights, FLAGS_task, FLAGS_chop, FLAGS_max_chop, FLAGS_punctuation,
       FLAGS_wordmap, FLAGS_chop_file, FLAGS_constraints,
-      FLAGS_constraints_file);
+      FLAGS_constraints_file, FLAGS_allow_deletion);
   decoder.decode();
 }

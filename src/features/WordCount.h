@@ -1,12 +1,12 @@
 /*
- * DummyFeature.h
+ * WordCount.h
  *
- *  Created on: 9 Jan 2013
+ *  Created on: 26 Jun 2013
  *      Author: jmp84
  */
 
-#ifndef DUMMYFEATURE_H_
-#define DUMMYFEATURE_H_
+#ifndef WORDCOUNT_H_
+#define WORDCOUNT_H_
 
 #include "features/Feature.h"
 #include "features/FeatureCreatorImpl.h"
@@ -16,18 +16,18 @@ namespace eng {
 namespace gen {
 
 /**
- * Dummy feature to test the feature framework.
+ * Word count feature. Returns the size of the ngram.
  */
-class DummyFeature : public Feature {
+class WordCount : public Feature {
 public:
-  virtual ~DummyFeature();
+  virtual ~WordCount();
   virtual const float getValue(const Ngram& rule) const;
 private:
-  static const FeatureCreatorImpl<DummyFeature> creator;
+  static const FeatureCreatorImpl<WordCount> creator;
 };
 
 } // namespace gen
 } // namespace eng
 } // namespace cam
 
-#endif /* DUMMYFEATURE_H_ */
+#endif /* WORDCOUNT_H_ */

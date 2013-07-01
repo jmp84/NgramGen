@@ -46,6 +46,8 @@ public:
    * @param chopFile File with chopping info.
    * @param constraints Constraints strategy.
    * @param constraintsFile Constraints file.
+   * @param allowDeletion Whether unigrams are allowed to be deleted (an epsilon
+   * arc is added in the resulting fst).
    */
   Decoder(
       const std::string& sentenceFile, const std::string& ngrams,
@@ -57,7 +59,7 @@ public:
       const std::string& chop, const int maxChop,
       const std::string& punctuation, const std::string& wordmap,
       const std::string& chopFile, const std::string& constraints,
-      const std::string& constraintsFile);
+      const std::string& constraintsFile, const bool allowDeletion);
 
   /**
    * Decodes everything.
@@ -138,6 +140,9 @@ private:
   boost::shared_ptr<Chopper> chopper_;
   /** Constraint interface. */
   boost::shared_ptr<Constraints> constraints_;
+  /** Allows unigrams to be deleted (an epsilon arc is added in the resulting
+   * fst). */
+  bool allowDeletion_;
 };
 
 template <class Arc>
@@ -159,8 +164,8 @@ void Decoder::decode(
           splitPositions.size() << " in sentence id " << id;
       splitPosition = splitPositions[chunkId];
     }
-    lattice->extend(
-        ngramLoader, i, pruneNbest_, pruneThreshold_, overlap_, chunkId);
+    lattice->extend(ngramLoader, i, pruneNbest_, pruneThreshold_, overlap_,
+                    chunkId, allowDeletion_);
   }
   lattice->markFinalStates(inputSentence.size());
   if (addInput_) {
