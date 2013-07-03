@@ -42,6 +42,18 @@ Cost lmCost(const State& state, const Ngram& rule,
   return res * (-log(10));
 }
 
+Cost lmCostDeletion(const State& state, const Ngram& rule,
+                    lm::ngram::State* nextKenlmState) {
+  CHECK_EQ(1, rule.size()) << "Deletions are not allowed for n-grams other "
+      "than unigrams";
+  CHECK_NE(STARTSENTENCE, rule[0]) << "Deletions are not allowed for "
+      "start-of-sentence";
+  CHECK_NE(ENDSENTENCE, rule[0]) << "Deletions are not allowed for "
+      "end-of-sentence";
+  *nextKenlmState = state.getKenlmState();
+  return 0;
+}
+
 } // namespace gen
 } // namespace eng
 } // namespace cam

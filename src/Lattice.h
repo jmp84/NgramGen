@@ -336,7 +336,7 @@ void Lattice<Arc>::addInput() {
   lm::ngram::State endKenlmState;
   RuleCostAndWeightComputer<Arc> c;
   Weight inputWeight;
-  c(**(columns_[0].statesSortedByCost_.begin()), inputWords_, weights_,
+  c.compute(**(columns_[0].statesSortedByCost_.begin()), inputWords_, weights_,
     featureNames_, languageModel_, &endKenlmState, &inputWeight);
   StateId id = fst_->Start();
   StateId nextId;
@@ -481,7 +481,7 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
   lm::ngram::State* nextKenlmState = new lm::ngram::State();
   Weight arcWeight;
   RuleCostAndWeightComputer<Arc> ruleCostAndWeightComputer;
-  Cost applyNgramCost = ruleCostAndWeightComputer(
+  Cost applyNgramCost = ruleCostAndWeightComputer.compute(
       state, ngram, weights_, featureNames_, languageModel_,
       nextKenlmState, &arcWeight);
   Cost newCost = state.cost() + applyNgramCost;
@@ -569,13 +569,12 @@ void Lattice<Arc>::extendDeletion(
       "than unigrams";
   Coverage newCoverage = state.coverage() | coverage;
   int columnIndex = newCoverage.count();
-  // duplicate the history
   lm::ngram::State* nextKenlmState = new lm::ngram::State();
-  *nextKenlmState = state.getKenlmState();
-  // no cost
-  Weight arcWeight = Weight::One();
-  // new cost is the same as the old cost
-  Cost newCost = state.cost();
+  Weight arcWeight;
+  RuleCostAndWeightComputer<Arc> ruleCostAndWeightComputer;
+  Cost applyNgramCost = ruleCostAndWeightComputer.computeDeletion(
+      state, unigram, weights_, featureNames_, nextKenlmState, &arcWeight);
+  Cost newCost = state.cost() + applyNgramCost;
   StateKey* newStateKey = new StateKey(newCoverage, *nextKenlmState);
   delete nextKenlmState;
   State* newState;

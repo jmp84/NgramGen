@@ -26,6 +26,15 @@ public:
    * @return The feature value computed on the rule.
    */
   virtual const float getValue(const Ngram& rule) const = 0;
+
+  /**
+   * Compute the deletion feature value for a rule. This value is zero for all
+   * features but the deletion feature, so the default implementation returns
+   * zero. This method is overriden in the Deletion class.
+   * @param rule The rule.
+   * @return The deletion feature value computed on the rule.
+   */
+  virtual const float getValueDeletion(const Ngram& rule) const;
 };
 
 } // namespace gen
