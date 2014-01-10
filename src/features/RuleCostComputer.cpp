@@ -26,6 +26,10 @@ Cost lmCost(const State& state, const Ngram& rule,
     if (rule[i] == STARTSENTENCE) {
       CHECK_EQ(0, i) << "Ngram with a start-of-sentence marker in the middle.";
       startKenlmStateTemp = languageModel->BeginSentenceState();
+      // corner case where the rule is just start of sentence
+      if (rule.size() == 1) {
+        *nextKenlmState = languageModel->BeginSentenceState();
+      }
       continue;
     }
     if (i == 0) {

@@ -16,7 +16,8 @@ namespace gen {
 Decoder::Decoder(const std::string& sentenceFile, const std::string& ngrams,
                  const std::string& lm, const std::string& fstOutput,
                  const std::string& range, const int overlap,
-                 const int pruneNbest, const float pruneThreshold,
+                 const int pruneNbest, const int pruneNbestInputLengthSpecific,
+                 const float pruneThreshold,
                  const float dumpPrune, const bool addInput,
                  const bool whenLostInput, const std::string& features,
                  const std::string& weights, const std::string& task,
@@ -26,6 +27,7 @@ Decoder::Decoder(const std::string& sentenceFile, const std::string& ngrams,
                  const std::string& constraintsFile, const bool allowDeletion) :
                    ngrams_(ngrams), lm_(lm), fstOutput_(fstOutput),
                    range_(range), overlap_(overlap), pruneNbest_(pruneNbest),
+                   pruneNbestInputLengthSpecific_(pruneNbestInputLengthSpecific),
                    pruneThreshold_(pruneThreshold), dumpPrune_(dumpPrune),
                    addInput_(addInput), whenLostInput_(whenLostInput),
                    task_(task), allowDeletion_(allowDeletion) {

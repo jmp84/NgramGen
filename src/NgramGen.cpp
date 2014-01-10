@@ -23,6 +23,11 @@ DEFINE_string(range, "1", "Range of items to be processed");
 DEFINE_int32(overlap, 0, "Maximum overlap allowed when extending a state.");
 DEFINE_int32(prune_nbest, 0, "N-best pruning: number of states kept in a"
              " column");
+DEFINE_int32(prune_nbest_input_length_specific, 0,
+             "N-best pruning dependent on the input length: the pruning "
+             "option given by the user is divided by the sentence length, for "
+             "example if the option given is 10000 and the input length is "
+             "10, the effective n-best pruning is 10000/10 = 1000.");
 DEFINE_double(prune_threshold, 0, "Threshold pruning: add this threshold to "
               " the lowest cost in a column to define what states are kept.");
 DEFINE_double(dump_prune, 0, "Pruning parameter for dumping lattices. If set to"
@@ -87,6 +92,8 @@ void checkArgs(int argc, char** argv) {
             "threshold strategy is allowed: --prune_nbest or --prune_threshold";
   CHECK(FLAGS_task == "decode" || FLAGS_task == "tune") << "Unknown task: " <<
       FLAGS_task << ". The task can only be 'decode' or 'tune'";
+  // TODO check all flags
+  // TODO check for length dependent pruning
 }
 
 } // namespace gen
@@ -102,7 +109,8 @@ int main(int argc, char** argv) {
   checkArgs(argc, argv);
   Decoder decoder(
       FLAGS_sentence_file, FLAGS_ngrams, FLAGS_lm, FLAGS_fstoutput,
-      FLAGS_range, FLAGS_overlap, FLAGS_prune_nbest, FLAGS_prune_threshold,
+      FLAGS_range, FLAGS_overlap, FLAGS_prune_nbest,
+      FLAGS_prune_nbest_input_length_specific, FLAGS_prune_threshold,
       FLAGS_dump_prune, FLAGS_add_input, FLAGS_when_lost_input, FLAGS_features,
       FLAGS_weights, FLAGS_task, FLAGS_chop, FLAGS_max_chop, FLAGS_punctuation,
       FLAGS_wordmap, FLAGS_chop_file, FLAGS_constraints,

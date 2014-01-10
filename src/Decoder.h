@@ -31,6 +31,8 @@ public:
    * @param range The range of sentences to decode.
    * @param overlap The allowed overlap between n-grams.
    * @param pruneNbest The maximum number of states in a column.
+   * @param pruneNbestInputLengthSpecific This number divided by the number
+   * of input words represents the maximum number of states in a column.
    * @param pruneThreshold The threshold for beam pruning.
    * @param dumpPrune The pruning parameter to use prior to dumping the fst.
    * @param addInput Determines if the input should be added to the output
@@ -53,6 +55,7 @@ public:
       const std::string& sentenceFile, const std::string& ngrams,
       const std::string& lm, const std::string& fstOutput,
       const std::string& range, const int overlap, const int pruneNbest,
+      const int pruneNbestInputLengthSpecific,
       const float pruneThreshold, const float dumpPrune, const bool addInput,
       const bool whenLostInput, const std::string& features,
       const std::string& weights, const std::string& task,
@@ -126,6 +129,9 @@ private:
   int overlap_;
   /** Maximum number of states in a column. */
   int pruneNbest_;
+  /** This number divided by the number
+   * of input words represents the maximum number of states in a column. */
+  int pruneNbestInputLengthSpecific_;
   /** Threshold for beam pruning. */
   float pruneThreshold_;
   /** Pruning parameter for pruning output fst before dumping to disk. */
@@ -154,6 +160,12 @@ void Decoder::decode(
       " at least one element which is the size of the input sentence.";
   int chunkId = 0;
   int splitPosition = splitPositions[0];
+  int pruneNbest = 0;
+  if (pruneNbest_ != 0) {
+    pruneNbest = pruneNbest_;
+  } else if (pruneNbestInputLengthSpecific_ != 0) {
+    pruneNbest = pruneNbestInputLengthSpecific_ / inputSentence.size();
+  }
   for (int i = 0; i < inputSentence.size(); ++i) {
     if (i >= splitPosition) {
       ++chunkId;
@@ -164,7 +176,7 @@ void Decoder::decode(
           splitPositions.size() << " in sentence id " << id;
       splitPosition = splitPositions[chunkId];
     }
-    lattice->extend(ngramLoader, i, pruneNbest_, pruneThreshold_, overlap_,
+    lattice->extend(ngramLoader, i, pruneNbest, pruneThreshold_, overlap_,
                     chunkId, allowDeletion_);
   }
   lattice->markFinalStates(inputSentence.size());
