@@ -50,6 +50,9 @@ public:
    * @param constraintsFile Constraints file.
    * @param allowDeletion Whether unigrams are allowed to be deleted (an epsilon
    * arc is added in the resulting fst).
+   * @param futureCostLm Directory containing unigram language
+   * models to estimate a future cost. The unigram language models are applied
+   * to the words not yet covered.
    */
   Decoder(
       const std::string& sentenceFile, const std::string& ngrams,
@@ -62,7 +65,8 @@ public:
       const std::string& chop, const int maxChop,
       const std::string& punctuation, const std::string& wordmap,
       const std::string& chopFile, const std::string& constraints,
-      const std::string& constraintsFile, const bool allowDeletion);
+      const std::string& constraintsFile, const bool allowDeletion,
+      const std::string& futureCostLm);
 
   /**
    * Decodes everything.
@@ -149,6 +153,10 @@ private:
   /** Allows unigrams to be deleted (an epsilon arc is added in the resulting
    * fst). */
   bool allowDeletion_;
+  /** Directory containing unigram language
+   * models to estimate a future cost. The unigram language models are applied
+   * to the words not yet covered. */
+  std::string futureCostLm_;
 };
 
 template <class Arc>

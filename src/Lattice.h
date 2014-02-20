@@ -45,10 +45,14 @@ public:
    * @param languageModel The language model.
    * @param featureNames The feature names.
    * @param weights The feature weights.
+   * @param futureCostLanguageModel Unigram language model to estimate the
+   * future cost. The unigram language model is applied to the words not yet
+   * covered.
    */
   Lattice(const std::vector<int>& words,
           boost::shared_ptr<lm::ngram::Model> languageModel,
-          const std::vector<std::string>& featureNames, const Weights& weights);
+          const std::vector<std::string>& featureNames, const Weights& weights,
+          const boost::shared_ptr<lm::ngram::Model>& futureCostLanguageModel);
 
   /**
    * Destructor. Custom destructor because one field is a pointer.
@@ -220,6 +224,14 @@ private:
   const bool checkNextStateHasInput(
       const State& state, const int columnIndex, const Ngram& ngram) const;
 
+  /**
+   * Compute the future cost given a coverage. A unigram LM is applied to the
+   * words not yet covered.
+   * @param coverage The coverage.
+   * @return The future cost.
+   */
+  const Cost computeFutureCost(const Coverage& coverage) const;
+
   /** The fst encoding the hypotheses. */
   boost::scoped_ptr<fst::VectorFst<Arc> > fst_;
 
@@ -239,6 +251,10 @@ private:
   /** List of weights. */
   Weights weights_;
 
+  /** Unigram language model to estimate a future cost. The unigram language
+   * model is applied to the words not yet covered. */
+  boost::shared_ptr<lm::ngram::Model> futureCostLanguageModel_;
+
   friend class LatticeTest;
 };
 
@@ -246,10 +262,13 @@ template <class Arc>
 Lattice<Arc>::Lattice(const std::vector<int>& words,
                       boost::shared_ptr<lm::ngram::Model> languageModel,
                       const std::vector<std::string>& featureNames,
-                      const Weights& weights) :
+                      const Weights& weights,
+                      const boost::shared_ptr<lm::ngram::Model>&
+                      futureCostLanguageModel) :
     fst_(new fst::VectorFst<Arc>()), columns_(words.size() + 1),
     languageModel_(languageModel), inputWords_(words),
-    featureNames_(featureNames), weights_(weights) {
+    featureNames_(featureNames), weights_(weights),
+    futureCostLanguageModel_(futureCostLanguageModel) {
   Coverage emptyCoverage(words.size());
   // We initialize with a null context rather than a sentence begin context
   // because if we chop an input sentence, then the first word might not be a
@@ -258,7 +277,9 @@ Lattice<Arc>::Lattice(const std::vector<int>& words,
   StateKey* initStateKey = new StateKey(emptyCoverage, initKenlmState);
   StateId startId = fst_->AddState();
   fst_->SetStart(startId);
-  State* initState = new State(startId, initStateKey, 0, true);
+  Cost futureCost = computeFutureCost(emptyCoverage);
+  State* initState =
+      new State(startId, initStateKey, futureCost, futureCost, true);
   columns_[0].statesIndexByStateKey_[*initStateKey] = initState;
   columns_[0].statesSortedByCost_.insert(initState);
 }
@@ -484,7 +505,9 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
   Cost applyNgramCost = ruleCostAndWeightComputer.compute(
       state, ngram, weights_, featureNames_, languageModel_,
       nextKenlmState, &arcWeight);
-  Cost newCost = state.cost() + applyNgramCost;
+  Cost newFutureCost = computeFutureCost(newCoverage);
+  Cost newCost =
+      state.cost() - state.futureCost() + applyNgramCost + newFutureCost;
   StateKey* newStateKey = new StateKey(newCoverage, *nextKenlmState);
   delete nextKenlmState;
   State* newState;
@@ -502,7 +525,7 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
     // ordering is still correct.
     if (newCost < existingCost) {
       newState = new State(oldState->stateId(), newStateKey, newCost,
-                           hasInput || oldState->hasInput());
+                           newFutureCost, hasInput || oldState->hasInput());
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.erase(oldState);
       columns_[columnIndex].statesSortedByCost_.insert(newState);
@@ -530,12 +553,14 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
       }
       StateId nextStateId =
           addFstStatesAndArcsNewState(state, ngram, arcWeight);
-      newState = new State(nextStateId, newStateKey, newCost, hasInput);
+      newState =
+          new State(nextStateId, newStateKey, newCost, newFutureCost, hasInput);
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.insert(newState);
       stateIt = columns_[columnIndex].statesSortedByCost_.end();
       stateIt--;
-      columns_[columnIndex].statesIndexByStateKey_.erase(*((*stateIt)->stateKey()));
+      columns_[columnIndex].statesIndexByStateKey_.erase(
+          *((*stateIt)->stateKey()));
       columns_[columnIndex].statesSortedByCost_.erase(stateIt);
     }
     else if (pruneThreshold > 0 && columnIndex != inputWords_.size() &&
@@ -552,7 +577,8 @@ void Lattice<Arc>::extend(const State& state, const Ngram& ngram,
     } else {
       StateId nextStateId =
           addFstStatesAndArcsNewState(state, ngram, arcWeight);
-      newState = new State(nextStateId, newStateKey, newCost, hasInput);
+      newState =
+          new State(nextStateId, newStateKey, newCost, newFutureCost, hasInput);
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.insert(newState);
     }
@@ -574,7 +600,9 @@ void Lattice<Arc>::extendDeletion(
   RuleCostAndWeightComputer<Arc> ruleCostAndWeightComputer;
   Cost applyNgramCost = ruleCostAndWeightComputer.computeDeletion(
       state, unigram, weights_, featureNames_, nextKenlmState, &arcWeight);
-  Cost newCost = state.cost() + applyNgramCost;
+  Cost newFutureCost = computeFutureCost(newCoverage);
+  Cost newCost =
+      state.cost() - state.futureCost() + applyNgramCost + newFutureCost;
   StateKey* newStateKey = new StateKey(newCoverage, *nextKenlmState);
   delete nextKenlmState;
   State* newState;
@@ -592,7 +620,7 @@ void Lattice<Arc>::extendDeletion(
     // ordering is still correct.
     if (newCost < existingCost) {
       newState = new State(oldState->stateId(), newStateKey, newCost,
-                           hasInput || oldState->hasInput());
+                           newFutureCost, hasInput || oldState->hasInput());
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.erase(oldState);
       columns_[columnIndex].statesSortedByCost_.insert(newState);
@@ -619,12 +647,14 @@ void Lattice<Arc>::extendDeletion(
         return;
       }
       StateId nextStateId = addFstDeletionNewState(state, arcWeight);
-      newState = new State(nextStateId, newStateKey, newCost, hasInput);
+      newState =
+          new State(nextStateId, newStateKey, newCost, newFutureCost, hasInput);
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.insert(newState);
       stateIt = columns_[columnIndex].statesSortedByCost_.end();
       stateIt--;
-      columns_[columnIndex].statesIndexByStateKey_.erase(*((*stateIt)->stateKey()));
+      columns_[columnIndex].statesIndexByStateKey_.erase(
+          *((*stateIt)->stateKey()));
       columns_[columnIndex].statesSortedByCost_.erase(stateIt);
     }
     else if (pruneThreshold > 0 && columnIndex != inputWords_.size() &&
@@ -640,7 +670,8 @@ void Lattice<Arc>::extendDeletion(
       // remove states!!!
     } else {
       StateId nextStateId = addFstDeletionNewState(state, arcWeight);
-      newState = new State(nextStateId, newStateKey, newCost, hasInput);
+      newState =
+          new State(nextStateId, newStateKey, newCost, newFutureCost, hasInput);
       columns_[columnIndex].statesIndexByStateKey_[*newStateKey] = newState;
       columns_[columnIndex].statesSortedByCost_.insert(newState);
     }
@@ -718,6 +749,30 @@ const bool Lattice<Arc>::checkNextStateHasInput(
     }
   }
   return true;
+}
+
+template <class Arc>
+const Cost Lattice<Arc>::computeFutureCost(const Coverage& coverage) const {
+  Cost res = 0;
+  if (futureCostLanguageModel_) { // if NULL then no future cost estimated
+    lm::ngram::State startState(futureCostLanguageModel_->NullContextState()),
+        endState;
+    const lm::ngram::Vocabulary& vocab =
+        futureCostLanguageModel_->GetVocabulary();
+    const std::size_t sentenceSize = inputWords_.size();
+    for (std::size_t i = 0; i < sentenceSize; ++i) {
+      // if the bit at position sentenceSize - 1 - i is not set, this means that
+      // the word at position i has not been covered yet and the unigram LM is
+      // applied to that word
+      if (!coverage.test(sentenceSize - 1 - i) &&
+          inputWords_[i] != STARTSENTENCE &&
+          inputWords_[i] != ENDSENTENCE) {
+        res += futureCostLanguageModel_->Score(startState, index(vocab, inputWords_[i]), endState);
+        startState = endState;
+      }
+    }
+  }
+  return res * (-log(10));
 }
 
 } // namespace gen

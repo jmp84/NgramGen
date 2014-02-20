@@ -17,8 +17,9 @@ namespace eng {
 namespace gen {
 
 State::State(const StateId stateId, StateKey* stateKey, const Cost cost,
-             bool hasInput)
-  : stateId_(stateId), stateKey_(stateKey), cost_(cost), hasInput_(hasInput) {}
+             const Cost futureCost, bool hasInput)
+  : stateId_(stateId), stateKey_(stateKey), cost_(cost),
+    futureCost_(futureCost), hasInput_(hasInput) {}
 
 State::~State() {
   delete stateKey_;
@@ -34,6 +35,10 @@ const fst::StdArc::StateId State::stateId() const {
 
 const Cost State::cost() const {
   return cost_;
+}
+
+const Cost State::futureCost() const {
+  return futureCost_;
 }
 
 const Coverage& State::coverage() const {

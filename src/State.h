@@ -32,9 +32,11 @@ public:
    * @param stateId The state id in openfst.
    * @param key The key that uniquely defines the state.
    * @param cost The cost.
+   * @param futureCost The future cost.
+   * @param hasInput Whether the input has been recovered so far.
    */
   State(const StateId stateId, StateKey* key, const Cost cost,
-        const bool hasInput);
+        const Cost futureCost, const bool hasInput);
 
   /**
    * Destructor. Custom destructor to delete the state key pointer.
@@ -58,6 +60,12 @@ public:
    * @return The cost.
    */
   const Cost cost() const;
+
+  /**
+   * Getter.
+   * @return The future cost.
+   */
+  const Cost futureCost() const;
 
   /**
    * Getter.
@@ -94,8 +102,12 @@ private:
   StateId stateId_;
   /** A state key (pair coverage/history) that uniquely defines this state. */
   StateKey* stateKey_;
-  /** The best cost so far, or shortest distance from the initial state. */
+  /** The best cost so far, or shortest distance from the initial state.
+   * This takes into account the future cost. */
   Cost cost_;
+  /** The future cost, estimated as a unigram LM applied to the words not
+   * covered. */
+  Cost futureCost_;
   /** Indicates if the partial input has been regenerated. */
   bool hasInput_;
 };

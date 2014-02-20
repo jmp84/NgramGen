@@ -24,13 +24,15 @@ Decoder::Decoder(const std::string& sentenceFile, const std::string& ngrams,
                  const std::string& chop, const int maxChop,
                  const std::string& punctuation, const std::string& wordmap,
                  const std::string& chopFile, const std::string& constraints,
-                 const std::string& constraintsFile, const bool allowDeletion) :
+                 const std::string& constraintsFile, const bool allowDeletion,
+                 const std::string& futureCostLm) :
                    ngrams_(ngrams), lm_(lm), fstOutput_(fstOutput),
                    range_(range), overlap_(overlap), pruneNbest_(pruneNbest),
                    pruneNbestInputLengthSpecific_(pruneNbestInputLengthSpecific),
                    pruneThreshold_(pruneThreshold), dumpPrune_(dumpPrune),
                    addInput_(addInput), whenLostInput_(whenLostInput),
-                   task_(task), allowDeletion_(allowDeletion) {
+                   task_(task), allowDeletion_(allowDeletion),
+                   futureCostLm_(futureCostLm) {
   parseInput(sentenceFile);
   parseFeatures(features);
   parseWeights(weights);
@@ -71,14 +73,23 @@ void Decoder::decode(
   lmFile << lm_ << "/" << id << "/lm.4.gz";
   boost::shared_ptr<lm::ngram::Model> languageModel(
       new lm::ngram::Model(lmFile.str().c_str()));
+  boost::shared_ptr<lm::ngram::Model> futureCostLanguageModel;
+  if (!futureCostLm_.empty()) {
+    std::ostringstream futureCostLmFile;
+    futureCostLmFile << futureCostLm_ << "/" << id << "/lm.1";
+    futureCostLanguageModel.reset(
+        new lm::ngram::Model(futureCostLmFile.str().c_str()));
+  }
   if (task_ == "decode") {
     decode<fst::StdArc>(inputSentence, splitPositions, ngramLoader, id,
                         new Lattice<fst::StdArc>(
-                            inputSentence, languageModel, features_, weights_));
+                            inputSentence, languageModel, features_, weights_,
+                            futureCostLanguageModel));
   } else if (task_ == "tune") {
     decode<TupleArc32>(inputSentence, splitPositions, ngramLoader, id,
                        new Lattice<TupleArc32>(
-                           inputSentence, languageModel, features_, weights_));
+                           inputSentence, languageModel, features_, weights_,
+                           futureCostLanguageModel));
   }
 }
 

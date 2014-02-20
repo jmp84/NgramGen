@@ -67,6 +67,9 @@ DEFINE_string(constraints_file, "", "File with constraints. The constraints are"
     "Chunks are currently defined by chopping.");
 DEFINE_bool(allow_deletion, false, "Allows unigrams to be deleted (an epsilon "
     "arc will be added to the resulting fst).");
+DEFINE_string(future_cost_lm, "", "Directory containing unigram language "
+    "models to estimate a future cost. The unigram language models are applied "
+    "to the words not yet covered. By default, no future cost is estimated.");
 
 namespace cam {
 namespace eng {
@@ -114,6 +117,6 @@ int main(int argc, char** argv) {
       FLAGS_dump_prune, FLAGS_add_input, FLAGS_when_lost_input, FLAGS_features,
       FLAGS_weights, FLAGS_task, FLAGS_chop, FLAGS_max_chop, FLAGS_punctuation,
       FLAGS_wordmap, FLAGS_chop_file, FLAGS_constraints,
-      FLAGS_constraints_file, FLAGS_allow_deletion);
+      FLAGS_constraints_file, FLAGS_allow_deletion, FLAGS_future_cost_lm);
   decoder.decode();
 }
