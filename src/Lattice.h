@@ -475,6 +475,13 @@ bool Lattice<Arc>::canApply(const State& state, const Ngram& ngram,
   if (ngram[0] == STARTSENTENCE && !state.isInitial()) {
     return false;
   }
+  // check that if the state is initial, then the
+  // ngram has to start with a start-of-sentence.
+  // This assumes an input bag of words with start and end
+  // of sentence markers.
+  if (ngram[0] != STARTSENTENCE && state.isInitial()) {
+    return false;
+  }
   // checks that if the ngram ends with end-of-sentence, then the resulting
   // coverage will cover all words
   if (ngram[ngram.size() - 1] == ENDSENTENCE) {
